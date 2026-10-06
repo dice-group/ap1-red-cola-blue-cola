@@ -1,3 +1,6 @@
+<img width="2172" height="724" alt="image" src="https://github.com/user-attachments/assets/e09eba58-a28a-4bc2-ad93-a00b4dc45400" />
+
+
 # RED COLA – BLUE COLA
 
 An educational demo of AI safety risks and mitigation strategies for industry stakeholders and non-specialist audiences.
