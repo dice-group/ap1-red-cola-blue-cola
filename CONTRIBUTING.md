@@ -1,21 +1,24 @@
-# Contribuir
+# Contributing
 
-Antes de desarrollar, leer README.md, docs/demo-flow.md y docs/architecture.md.
+Before starting development, read README.md, docs/demo-flow.md, and docs/architecture.md.
 
-## Cambios
+## Changes
 
-- Trabajar en una rama y enviar un pull request con problema, comportamiento esperado y verificación.
-- Documentar decisiones de stack en docs/decisions/ antes de incorporar dependencias.
-- Mantener contenido educativo separado de lógica y proveedores de IA.
-- Identificar claramente resultados simulados y resultados de modelos reales.
-- Usar solamente datos ficticios. No incluir credenciales ni documentos de empresas reales.
-- Explicar cada tarjeta con lenguaje accesible y sus limitaciones.
-- Mantener RED COLA como defensor y BLUE COLA como atacante.
+- Work on a branch and submit a pull request describing the problem, expected behavior, and validation.
+- Document stack decisions in docs/decisions/ before adding dependencies.
+- Keep educational content separate from application logic and AI providers.
+- Clearly distinguish simulated outcomes from real model outcomes.
+- Use fictional data only. Do not include credentials or documents from real companies.
+- Explain each card in accessible language and describe its limitations.
+- Keep RED COLA as the defender and BLUE COLA as the attacker.
+- Write documentation, educational content, and user-facing text in English.
 
-## Verificación
+## Validation
 
-Para contenido: revisar coherencia entre tarjetas, escenarios y documentación; validar JSON.
-Para motor o controles: verificar permisos antes de recuperación, exposición parcial, solicitudes legítimas y reinicio de sesión.
-Para interfaz: verificar ambos roles, navegación por teclado, etiquetas y que el resultado no dependa exclusivamente del color.
+For content: check consistency between cards, scenarios, and documentation; validate JSON.
 
-El proyecto todavía no define un runner de pruebas. Cada PR debe indicar qué se verificó y qué queda pendiente.
+For the engine or security controls: verify permissions before retrieval, partial disclosure, legitimate requests, and session resets.
+
+For the interface: check both roles, keyboard navigation, labels, and that outcomes do not rely exclusively on color.
+
+The project does not yet define a test runner. Each pull request must state what was verified and what remains pending.

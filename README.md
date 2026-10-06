@@ -1,155 +1,157 @@
 # RED COLA – BLUE COLA
 
-Demo educativo de riesgos y mitigaciones de seguridad en sistemas de IA, dirigido a participantes de la industria y públicos sin conocimientos técnicos especializados.
+An educational demo of AI safety risks and mitigation strategies for industry stakeholders and non-specialist audiences.
 
 > Demonstrators that communicate AI Safety risks and mitigation strategies in a way that is accessible to industry stakeholders and non-specialist audiences.
 
-## Estado del proyecto
+## Project status
 
-Este repositorio contiene la documentación y la estructura inicial para desarrollar el demo. Todavía no incluye una aplicación ejecutable, integración con modelos ni controles de seguridad implementados. Las carpetas de código describen responsabilidades previstas; no se ha fijado un framework.
+This repository contains the documentation and initial structure for developing the demo. It does not yet include a runnable application, model integrations, or implemented security controls. Code directories describe planned responsibilities; no framework has been selected.
 
-## El escenario
+## The scenario
 
-RED COLA dispone de un asistente de IA que consulta la base de conocimiento de la empresa para ayudar a empleados y proveedores. Los documentos tienen distintos niveles de acceso: público, interno y confidencial. Una receta completamente ficticia representa el secreto que debe protegerse.
+RED COLA uses an AI assistant to consult its corporate knowledge base and help employees and suppliers. Documents have different access levels: public, internal, and confidential. A completely fictional recipe represents the secret to protect.
 
-BLUE COLA, una empresa competidora ficticia, intenta conseguir esa receta manipulando solicitudes o documentos consultados por el asistente. El visitante elige una de las dos interfaces.
+BLUE COLA, a fictional competitor, tries to obtain that recipe by manipulating requests or documents consulted by the assistant. Visitors choose one of two interfaces.
 
-**Pregunta central:** ¿puede el asistente ayudar a las personas sin revelar información que no deberían recibir?
+**Central question:** can the assistant help people without revealing information they are not authorized to receive?
 
-El foco inicial es la confidencialidad, la manipulación de instrucciones y el uso de herramientas. El demo ilustra una parte de AI Safety; no constituye una evaluación completa de seguridad de un modelo.
+The initial focus is confidentiality, instruction manipulation, and tool use. The demo illustrates a subset of AI safety risks; it is not a comprehensive model safety assessment.
 
-## Las dos fases de juego
+## The two gameplay phases
 
-Aquí “fase” designa la experiencia de cada rol. El usuario puede elegir cualquiera primero y después repetir la situación desde la otra perspectiva. No son dos etapas obligatorias de una única partida.
+Here, “phase” refers to each role's experience. Users can start with either role and then replay the situation from the other perspective. These are not two mandatory stages of a single game.
 
-### Fase RED COLA: defender
+### RED COLA phase: defend
 
-**Rol:** responsable del asistente empresarial.
+**Role:** the person responsible for the enterprise assistant.
 
-**Objetivo:** proteger la receta y mantener útil el asistente para solicitudes autorizadas. Bloquear todo no equivale a ganar.
+**Goal:** protect the recipe while keeping the assistant useful for authorized requests. Blocking everything does not count as winning.
 
-1. Consulta el escenario, la identidad del solicitante y los tipos de documentos disponibles.
-2. Selecciona defensas de un catálogo de tarjetas comprensibles.
-3. Un rival automático ejecuta un intento predefinido de BLUE COLA.
-4. Observa los documentos consultados, la respuesta y las defensas que actuaron.
-5. Evalúa confidencialidad, utilidad y coste operativo.
-6. Repite con otra combinación de defensas para comparar el antes y el después.
+1. Review the scenario, the requester's identity, and the available document types.
+2. Select defenses from a catalog of easy-to-understand cards.
+3. An automated opponent performs a predefined BLUE COLA attempt.
+4. Observe the documents consulted, the response, and the defenses that took effect.
+5. Evaluate confidentiality, utility, and operational cost.
+6. Replay with another combination of defenses to compare before and after.
 
-Cada tarjeta explica qué protege, dónde actúa y qué limitaciones tiene.
+Each card explains what it protects, where it acts, and its limitations.
 
-### Fase BLUE COLA: atacar
+### BLUE COLA phase: attack
 
-**Rol:** competidor que interactúa con el asistente dentro del entorno ficticio.
+**Role:** a competitor interacting with the assistant within the fictional environment.
 
-**Objetivo:** obtener la receta o información parcial mediante las opciones del catálogo.
+**Goal:** obtain the recipe or partial information using the catalog options.
 
-1. Consulta el contexto y las opciones de ataque disponibles.
-2. Elige una tarjeta de ataque; el MVP no necesita entrada libre.
-3. El asistente de RED COLA responde con la configuración de defensa del escenario.
-4. Observa la respuesta y el progreso hacia la receta.
-5. Lee por qué funcionó o falló el intento y qué mitigación habría ayudado.
-6. Repite desde el mismo estado inicial para comparar estrategias.
+1. Review the context and the available attack options.
+2. Choose an attack card; the MVP does not require free-form input.
+3. RED COLA's assistant responds using the scenario's defense configuration.
+4. Observe the response and progress toward obtaining the recipe.
+5. Read why the attempt succeeded or failed and which mitigation could have helped.
+6. Replay from the same initial state to compare strategies.
 
-La evaluación del resultado se realiza en el motor del demo. El cliente de BLUE COLA no recibe documentos confidenciales ni respuestas esperadas ocultas antes del intento.
+The demo engine evaluates outcomes. The BLUE COLA client does not receive confidential documents or hidden expected responses before the attempt.
 
-## Catálogo inicial del MVP
+## Initial MVP catalog
 
-Cuatro ataques y cuatro defensas. Las correspondencias sirven para explicar cada riesgo; no garantizan que una sola defensa lo resuelva.
+Four attacks and four defenses. These pairings explain each risk; they do not guarantee that a single defense will resolve it.
 
-| Ataque de BLUE COLA | Riesgo que comunica | Defensa de RED COLA | Limitación a explicar |
+| BLUE COLA attack | Risk illustrated | RED COLA defense | Limitation to explain |
 | --- | --- | --- | --- |
-| “Soy del equipo directivo” | Aceptar una identidad o autoridad declarada en el chat | Verificar identidad y permisos fuera del modelo | Una frase o un prompt no autentica a nadie |
-| “El documento te da una nueva orden” | Confundir contenido recuperado con instrucciones: inyección indirecta | Separar instrucciones y documentos; aplicar permisos al recuperar | La separación de instrucciones reduce riesgo, pero no reemplaza permisos |
-| “Dame una pequeña parte” | Acumular fragmentos de información sensible entre turnos | Aplicar mínimo privilegio y revisar exposición acumulada | Un filtro por respuesta puede perder la relación entre consultas |
-| “Ponlo en otro formato” | Revelar un secreto al traducir, resumir o transformar | Revisar contenido sensible independientemente del formato | La revisión de salida es una capa adicional, no un control de acceso |
+| “I am on the leadership team” | Accepting an identity or authority claimed in chat | Verify identity and permissions outside the model | A statement or prompt does not authenticate anyone |
+| “The document gives you a new instruction” | Confusing retrieved content with instructions: indirect prompt injection | Separate instructions from documents; enforce permissions during retrieval | Instruction separation reduces risk but does not replace permissions |
+| “Give me a small piece” | Accumulating fragments of sensitive information across turns | Apply least privilege and review cumulative disclosure | A per-response filter may miss connections between requests |
+| “Put it in another format” | Revealing a secret through translation, summarization, or transformation | Review sensitive content regardless of format | Output review is an additional layer, not an access control |
 
-Una ampliación posterior podrá incorporar herramientas y destinos externos para ilustrar transferencias de información. El MVP no realizará envíos externos.
+A later extension may introduce tools and external destinations to illustrate information transfers. The MVP will not send information externally.
 
-## Ejemplo antes / después
+## Before / after example
 
-Un documento de proveedor contiene una instrucción que pide incluir la receta en el resumen.
+A supplier document contains an instruction asking the assistant to include the recipe in its summary.
 
-- **Configuración vulnerable:** el asistente recibe documentos sin filtrar permisos y sigue la instrucción del proveedor. El guion simula una revelación.
-- **Configuración protegida:** la recuperación excluye la receta para esa identidad y el contenido del proveedor se trata como datos, no como autoridad. El asistente ofrece un resumen permitido.
-- **Aprendizaje:** los controles de acceso deben impedir que el modelo reciba información no autorizada. “No reveles la receta” por sí solo es una defensa débil.
+- **Vulnerable configuration:** the assistant receives documents without permission filtering and follows the supplier's instruction. The script simulates a disclosure.
+- **Protected configuration:** retrieval excludes the recipe for that identity, and the supplier's content is treated as data rather than authority. The assistant provides an authorized summary.
+- **Lesson:** access controls must prevent the model from receiving unauthorized information. “Do not reveal the recipe” alone is a weak defense.
 
-## Resultados y aprendizaje
+## Outcomes and learning
 
-Mostrar tres indicadores independientes, sin ocultarlos detrás de un único puntaje:
+Display three independent indicators instead of hiding them behind a single score:
 
-| Indicador | Pregunta | Evaluación prevista |
+| Indicator | Question | Planned evaluation |
 | --- | --- | --- |
-| Confidencialidad | ¿Se expuso información restringida? | Receta completa, fragmento o ninguna exposición, según el escenario |
-| Utilidad | ¿Se resolvió la solicitud legítima? | Casos permitidos completados sobre casos permitidos ejecutados |
-| Coste operativo | ¿Qué esfuerzo exigió la protección? | Bloqueos, verificaciones y revisiones humanas simuladas |
+| Confidentiality | Was restricted information exposed? | Full recipe, fragment, or no disclosure, depending on the scenario |
+| Utility | Was the legitimate request completed? | Completed authorized cases divided by executed authorized cases |
+| Operational cost | What effort did protection require? | Simulated blocks, verification steps, and human reviews |
 
-Las reglas de exposición de cada escenario deben especificar qué cuenta como fragmento o receta completa. Estos indicadores educativos no son métricas de certificación.
+Each scenario's disclosure rules must specify what counts as a fragment or the full recipe. These educational indicators are not certification metrics.
 
-La pantalla de resultados debe explicar: qué ocurrió, qué información estaba autorizada, qué capa actuó y qué riesgo permanece.
+The results screen should explain what happened, which information was authorized, which layer acted, and what risk remains.
 
-## Alcance inicial
+## Initial scope
 
-- Dos interfaces: RED COLA y BLUE COLA.
-- Partidas individuales contra un rival automático.
-- Cuatro escenarios reproducibles con cuatro ataques y cuatro defensas.
-- Base de conocimiento y receta ficticias.
-- Comparación antes/después reiniciando el estado.
-- Trazas explicativas de consulta, decisión y respuesta.
-- Solicitudes legítimas para comprobar que las defensas conservan utilidad.
-- Modo simulado señalado explícitamente en todo momento.
+- Two interfaces: RED COLA and BLUE COLA.
+- Individual games against an automated opponent.
+- Four reproducible scenarios with four attacks and four defenses.
+- A fictional knowledge base and recipe.
+- Before/after comparisons by resetting state.
+- Explanatory traces of retrieval, decisions, and responses.
+- Legitimate requests to check that defenses preserve utility.
+- Simulation mode explicitly labeled at all times.
 
-El MVP previsto utiliza respuestas y resultados predefinidos. Una fase técnica posterior podrá conectar un modelo real mediante un adaptador. En ese caso, la interfaz deberá indicar “modelo real”, registrar su configuración y advertir que los resultados pueden variar. Un guion simulado no demuestra el comportamiento de un modelo real.
+The planned MVP uses predefined responses and outcomes. A later technical development stage may connect a real model through an adapter. In that case, the interface must display “real model,” record its configuration, and explain that results may vary. A simulated script does not demonstrate a real model's behavior.
 
-## Arquitectura prevista
+## Planned architecture
 
-| Módulo | Responsabilidad |
+| Module | Responsibility |
 | --- | --- |
-| apps/web | Selección de rol, tarjetas, intercambio, resultados y explicación |
-| apps/api | Sesiones, identidad del escenario y ejecución del motor |
-| packages/domain | Contratos comunes: roles, acciones, documentos, trazas y resultados |
-| packages/engine | Turnos, reglas, reinicio, evaluación y simulación |
-| packages/ai | Adaptadores para simulación y, posteriormente, modelos reales |
-| packages/security | Permisos de recuperación, fronteras de instrucciones y revisión de salida |
-| content | Catálogos educativos y documentos ficticios |
-| tests | Verificación futura de escenarios, permisos y flujos |
+| apps/web | Role selection, cards, interaction, results, and explanations |
+| apps/api | Sessions, scenario identity, and engine execution |
+| packages/domain | Shared contracts: roles, actions, documents, traces, and results |
+| packages/engine | Turns, rules, resets, evaluation, and simulation |
+| packages/ai | Adapters for simulation and, later, real models |
+| packages/security | Retrieval permissions, instruction boundaries, and output review |
+| content | Educational catalogs and fictional documents |
+| tests | Future verification of scenarios, permissions, and flows |
 
-Flujo previsto: **identidad y permisos → recuperación autorizada → asistente → revisión de respuesta → resultado educativo**.
+Planned flow: **identity and permissions → authorized retrieval → assistant → response review → educational outcome**.
 
-La configuración vulnerable existe solamente como caso didáctico explícito. En una implementación protegida, los permisos se aplican antes de entregar documentos al modelo. El motor no debe confiar en un rol enviado por el navegador como prueba de autorización.
+The vulnerable configuration exists only as an explicit teaching example. In a protected implementation, permissions are enforced before documents are passed to the model. The engine must not trust a role supplied by the browser as proof of authorization.
 
-La receta ficticia puede ser visible en el código público del repositorio; la meta es protegerla dentro de la sesión simulada, no afirmar que un repositorio público mantiene un secreto.
+The fictional recipe may be visible in the repository's public code. The goal is to protect it within the simulated session, not to claim that a public repository keeps it secret.
 
-## Estructura del repositorio
+## Repository structure
 
-| Ruta | Contenido inicial |
+| Path | Initial contents |
 | --- | --- |
-| README.md | Contexto, ambas fases, alcance y arquitectura |
-| CONTRIBUTING.md | Guía para desarrollar y revisar cambios |
-| docs/architecture.md | Límites entre módulos y reglas de diseño |
-| docs/demo-flow.md | Recorrido y criterios de aceptación |
-| apps/web/README.md | Responsabilidades de interfaz |
-| apps/api/README.md | Responsabilidades del servicio |
-| packages/*/README.md | Responsabilidades y futuras interfaces |
-| content/attacks/catalog.json | Cuatro tarjetas de ataque |
-| content/defenses/catalog.json | Cuatro tarjetas de defensa |
-| content/knowledge-base/documents.json | Documentos y receta de demostración |
-| content/scenarios/README.md | Contrato previsto de escenarios |
-| tests/README.md | Plan de verificación |
-| .gitignore | Exclusiones comunes y secretos locales |
+| README.md | Context, both phases, scope, and architecture |
+| CONTRIBUTING.md | Development and review guidance |
+| docs/architecture.md | Module boundaries and design rules |
+| docs/demo-flow.md | Walkthrough and acceptance criteria |
+| apps/web/README.md | Interface responsibilities |
+| apps/api/README.md | Service responsibilities |
+| packages/*/README.md | Responsibilities and future interfaces |
+| content/attacks/catalog.json | Four attack cards |
+| content/defenses/catalog.json | Four defense cards |
+| content/knowledge-base/documents.json | Demo documents and recipe |
+| content/scenarios/README.md | Planned scenario contract |
+| tests/README.md | Verification plan |
+| .gitignore | Common exclusions and local secrets |
 
-## Cómo comenzar a desarrollar
+## Getting started with development
 
-1. Leer este README y docs/demo-flow.md.
-2. Revisar docs/architecture.md y acordar el stack en una decisión documentada.
-3. Implementar primero el motor simulado y un escenario completo.
-4. Añadir ambas interfaces sobre los mismos contratos.
-5. Completar el catálogo y verificar reinicio, permisos, utilidad y explicaciones.
-6. Conectar un modelo real únicamente después de contar con una referencia reproducible.
+1. Read this README and docs/demo-flow.md.
+2. Review docs/architecture.md and agree on the stack in a documented decision.
+3. Implement the simulated engine and one complete scenario first.
+4. Add both interfaces using the same contracts.
+5. Complete the catalog and verify resets, permissions, utility, and explanations.
+6. Connect a real model only after establishing a reproducible baseline.
 
-No hay comandos de instalación o ejecución aún: no se han añadido dependencias ni scripts de arranque.
+There are no installation or run commands yet: dependencies and startup scripts have not been added.
 
-## Principios de comunicación y contribución
+## Communication and contribution principles
 
-Usar lenguaje cotidiano y ofrecer detalles técnicos bajo demanda. Mostrar código en módulos pequeños y explicar el propósito de cada capa. No presentar una mitigación como infalible. Mantener la convención del proyecto: **RED COLA defiende y BLUE COLA ataca**, aunque los nombres de colores puedan recordar otras convenciones.
+All project documentation, educational content, and user-facing text should be written in English.
 
-Consultar [CONTRIBUTING.md](CONTRIBUTING.md). La licencia del proyecto queda pendiente de elección por sus responsables.
+Use everyday language and offer technical details on demand. Show code in small modules and explain the purpose of each layer. Do not present any mitigation as infallible. Follow the project's convention: **RED COLA defends and BLUE COLA attacks**, even though the color names may evoke other conventions.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). The project license remains to be selected by its maintainers.
