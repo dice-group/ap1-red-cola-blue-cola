@@ -1,0 +1,30 @@
+[
+  {
+    "id": "verified-access",
+    "title": "Verificar identidad y permisos",
+    "explanation": "Comprobar autorización antes de recuperar documentos.",
+    "layer": "retrieval",
+    "limitation": "La identidad debe asignarse fuera del chat; esta tarjeta no implementa autenticación."
+  },
+  {
+    "id": "instruction-boundary",
+    "title": "Separar documentos e instrucciones",
+    "explanation": "Tratar las fuentes como datos y recuperar solo documentos autorizados.",
+    "layer": "context",
+    "limitation": "La separación de instrucciones no garantiza que un modelo real resista toda manipulación."
+  },
+  {
+    "id": "least-privilege-history",
+    "title": "Mínimo privilegio y revisión de historial",
+    "explanation": "Limitar documentos accesibles y revisar fragmentos expuestos entre turnos.",
+    "layer": "retrieval-and-session",
+    "limitation": "La revisión del historial complementa los permisos y necesita reglas de exposición explícitas."
+  },
+  {
+    "id": "content-review",
+    "title": "Revisar contenido en cualquier formato",
+    "explanation": "Comprobar información sensible en resúmenes, tablas y traducciones.",
+    "layer": "output",
+    "limitation": "Puede producir errores; no reemplaza restringir el contexto antes del modelo."
+  }
+]
