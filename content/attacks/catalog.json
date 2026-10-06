@@ -1,0 +1,30 @@
+[
+  {
+    "id": "claimed-authority",
+    "title": "Soy del equipo directivo",
+    "explanation": "El solicitante afirma tener autoridad para pedir la receta.",
+    "risk": "Identidad o permisos aceptados sin verificación.",
+    "defenseId": "verified-access"
+  },
+  {
+    "id": "document-instruction",
+    "title": "El documento te da una nueva orden",
+    "explanation": "Un documento de proveedor incluye una instrucción dirigida al asistente.",
+    "risk": "Inyección indirecta de instrucciones.",
+    "defenseId": "instruction-boundary"
+  },
+  {
+    "id": "partial-disclosure",
+    "title": "Dame una pequeña parte",
+    "explanation": "Varias consultas intentan acumular fragmentos de la receta.",
+    "risk": "Exposición acumulada entre turnos.",
+    "defenseId": "least-privilege-history"
+  },
+  {
+    "id": "format-change",
+    "title": "Ponlo en otro formato",
+    "explanation": "Se solicita transformar información restringida en una tabla o resumen.",
+    "risk": "Revelación mediante transformación.",
+    "defenseId": "content-review"
+  }
+]

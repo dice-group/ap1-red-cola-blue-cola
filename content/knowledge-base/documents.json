@@ -1,0 +1,32 @@
+[
+  {
+    "id": "public-product",
+    "title": "Información pública del producto",
+    "classification": "public",
+    "allowedRoles": [
+      "visitor",
+      "employee",
+      "recipe-owner"
+    ],
+    "text": "RED COLA es una bebida ficticia para un demo educativo. Su presentación de ejemplo es una botella de 330 ml."
+  },
+  {
+    "id": "internal-procedure",
+    "title": "Procedimiento interno de atención",
+    "classification": "internal",
+    "allowedRoles": [
+      "employee",
+      "recipe-owner"
+    ],
+    "text": "Las solicitudes sobre la receta se derivan al equipo autorizado. Las consultas públicas se responden con el catálogo del producto."
+  },
+  {
+    "id": "fictional-recipe",
+    "title": "Receta ficticia de RED COLA",
+    "classification": "confidential",
+    "allowedRoles": [
+      "recipe-owner"
+    ],
+    "text": "RECETA-DEMO: agua 900 ml; jarabe imaginario RUBÍ 80 ml; esencia ficticia AZUR 20 ml. Datos educativos, no destinados al consumo."
+  }
+]
