@@ -23,6 +23,7 @@ STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
+    "/fonts/lobster-latin.woff2": ("fonts/lobster-latin.woff2", "font/woff2"),
 }
 MAX_BODY_BYTES = 16 * 1024
 SESSION_ROUTE = re.compile(r"^/api/sessions/(?P<id>[\w-]+)(?:/(?P<action>turns|legitimate|reset|result))?$")

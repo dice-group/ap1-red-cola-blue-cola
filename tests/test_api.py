@@ -29,7 +29,7 @@ class ApiTest(unittest.TestCase):
                                      headers={"Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req) as response:
-                return response.status, response.read().decode()
+                return response.status, response.read().decode(errors="replace")
         except urllib.error.HTTPError as error:
             return error.code, error.read().decode()
 
@@ -45,9 +45,11 @@ class ApiTest(unittest.TestCase):
             self.assertNotIn(marker, text)
 
     def test_web_bundle_contains_no_secrets(self):
-        for path in ("/", "/app.js", "/styles.css"):
+        for path in ("/", "/app.js", "/styles.css", "/fonts/lobster-latin.woff2"):
             status, text = self.request("GET", path)
-            self.assertEqual(status, 200)
+            self.assertEqual(status, 200, path)
+            if path.endswith(".woff2"):
+                continue
             for marker in RECIPE_MARKERS:
                 self.assertNotIn(marker, text, path)
 

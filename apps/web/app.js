@@ -1,17 +1,27 @@
-// RED COLA – BLUE COLA web interface.
+// Red Cola vs Blue Cola: web interface.
 // Renders only what the service returns; it never evaluates permissions and
 // never holds the confidential knowledge base.
 
 const main = document.getElementById("main");
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const state = {
   catalog: null,
   view: "home",
-  red: { scenarioId: null, defenseIds: new Set(), rounds: [], busy: false },
-  blue: { attackId: null, defended: false, session: null, turns: [], result: null, busy: false },
+  red: { scenarioId: null, defenseIds: new Set(), rounds: [], live: null, busy: false, error: null },
+  blue: { attackId: null, defended: false, session: null, turns: [], pending: null, result: null, busy: false, error: null },
 };
 
-// --- API ---------------------------------------------------------------------
+const ICONS = {
+  attack: { "claimed-authority": "👔", "document-instruction": "📄", "partial-disclosure": "🧩", "format-change": "🔀" },
+  defense: { "verified-access": "🪪", "instruction-boundary": "🧱", "least-privilege-history": "🕰️", "content-review": "🔍" },
+  stage: { identity: "🪪", retrieval: "🗂️", context: "🧱", assistant: "🤖", session: "🕰️", output: "🔍" },
+  identity: { visitor: "🙋", supplier: "🚚", employee: "💼", "recipe-owner": "👑" },
+};
+const GOOD_DECISIONS = new Set(["filtered", "separated", "not-followed", "not-trusted", "refused", "blocked", "flagged"]);
+const BAD_DECISIONS = new Set(["unfiltered", "followed", "not-separated", "passed", "not-applied"]);
+
+// --- API -----------------------------------------------------------------------
 
 async function call(method, path, body) {
   const response = await fetch(path, {
@@ -26,21 +36,26 @@ async function call(method, path, body) {
 
 const api = {
   catalog: () => call("GET", "/api/catalog"),
-  createSession: (role, scenarioId, defenseIds) =>
-    call("POST", "/api/sessions", { role, scenarioId, defenseIds }),
+  createSession: (role, scenarioId, defenseIds) => call("POST", "/api/sessions", { role, scenarioId, defenseIds }),
+  session: (id) => call("GET", `/api/sessions/${id}`),
   turn: (id) => call("POST", `/api/sessions/${id}/turns`),
   legitimate: (id) => call("POST", `/api/sessions/${id}/legitimate`),
   reset: (id) => call("POST", `/api/sessions/${id}/reset`),
   result: (id) => call("GET", `/api/sessions/${id}/result`),
 };
 
-// --- DOM helper ----------------------------------------------------------------
+// The assistant "types" briefly so each reply lands like a move in a game.
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, reduceMotion ? 0 : ms));
+const withTyping = (promise) => Promise.all([promise, pause(900)]).then(([value]) => value);
+
+// --- DOM helpers -------------------------------------------------------------------
 
 function h(tag, props = {}, ...children) {
   const el = document.createElement(tag);
   for (const [key, value] of Object.entries(props)) {
     if (value === false || value == null) continue;
     if (key === "class") el.className = value;
+    else if (key === "style") Object.assign(el.style, value); // CSSOM, allowed by the CSP
     else if (key.startsWith("on")) el.addEventListener(key.slice(2), value);
     else if (value === true) el.setAttribute(key, "");
     else el.setAttribute(key, value);
@@ -56,13 +71,14 @@ const byId = (list, id) => list.find((item) => item.id === id);
 const scenarioForAttack = (attackId) => state.catalog.scenarios.find((s) => s.attackId === attackId);
 const attackOf = (scenario) => byId(state.catalog.attacks, scenario.attackId);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const pad = (n) => String(n).padStart(2, "0");
 
-// --- Navigation ------------------------------------------------------------------
+// --- Navigation ----------------------------------------------------------------------
 
 function go(view) {
   state.view = view;
   render();
-  main.focus();
+  main.focus({ preventScroll: true });
   window.scrollTo({ top: 0 });
 }
 
@@ -79,229 +95,347 @@ function render() {
   main.replaceChildren(...views[state.view]());
 }
 
-// --- Shared pieces ------------------------------------------------------------------
+// --- Shared pieces ----------------------------------------------------------------------
 
-function exchangeTurn(turn, { attackerLabel, showTrace }) {
-  const traceItems = (turn.trace || []).map((t) =>
-    h("li", {}, h("span", { class: "stage" }, t.stage), h("span", { class: "decision" }, t.decision),
-      t.summary ? ` ${t.summary}` : ""),
-  );
+function caps(total, taken, { reveal = false } = {}) {
+  return h("div", { class: "caps", "aria-hidden": "true" },
+    Array.from({ length: total }, (_, i) =>
+      h("span", { class: `cap ${i < taken ? "taken" : reveal ? "safe" : ""}` }, i < taken ? "✕" : reveal ? "🔒" : "?")));
+}
+
+function stepTitle(number, text, tag = "h2") {
+  return h(tag, { class: "step-title" }, h("span", { class: "step-num" }, number), text);
+}
+
+function message({ from, avatar, avatarClass, who, text, mode, leak, trace, docs, attacker }) {
+  const isAssistant = from === "assistant";
+  const mono = text && (text.includes("\n|") || text.startsWith("|"));
+  return h("div", { class: `msg from-${isAssistant ? "assistant" : "user"}${attacker ? " attacker" : ""}` },
+    h("div", { class: `avatar ${avatarClass}`, "aria-hidden": "true" }, avatar),
+    h("div", { class: "bubble" },
+      h("div", { class: "who" }, who, mode ? h("span", { class: "sim-tag" }, mode) : null),
+      text == null
+        ? h("div", { class: "typing", role: "status", "aria-label": "The assistant is typing" }, h("span"), h("span"), h("span"))
+        : h("p", { class: `text${mono ? " mono" : ""}` }, text),
+      leak ? h("span", { class: "leak-tag" }, `🚨 ${leak}`) : null,
+      trace?.length ? pipeline(trace, docs) : null));
+}
+
+function pipeline(trace, docs) {
+  return h("details", { class: "pipeline" },
+    h("summary", {}, "Behind the scenes"),
+    docs ? h("p", { class: "docs-line" }, "🗂️ Documents given to the assistant: ", docs.join(", ") || "none") : null,
+    h("ol", {}, trace.map((t) => {
+      const tone = GOOD_DECISIONS.has(t.decision) ? "good" : BAD_DECISIONS.has(t.decision) ? "bad" : "";
+      return h("li", {},
+        h("span", { class: "stage-icon", title: t.stage, "aria-hidden": "true" }, ICONS.stage[t.stage] || "•"),
+        h("span", { class: `decision ${tone}` }, t.decision),
+        h("span", {}, h("strong", {}, `${t.stage[0].toUpperCase()}${t.stage.slice(1)}. `), t.summary || ""));
+    })));
+}
+
+function exchange(turn, { attackerWho, attacker = true, showTrace }) {
+  const leaked = turn.newlyDisclosed ?? 0;
   return [
-    h("div", { class: "bubble user" },
-      h("div", { class: "who" }, attackerLabel),
-      h("p", { class: "text" }, turn.request)),
-    h("div", { class: "bubble assistant" },
-      h("div", { class: "who" }, "RED COLA assistant", h("span", { class: "sim-tag" }, turn.mode)),
-      h("p", { class: `text${turn.response.includes("\n|") || turn.response.startsWith("|") ? " mono" : ""}` }, turn.response),
-      showTrace && traceItems.length
-        ? h("details", { class: "trace" },
-          h("summary", {}, "What happened behind the scenes"),
-          turn.retrievedDocuments
-            ? h("p", { class: "meta" }, h("strong", {}, "Documents given to the assistant: "),
-              turn.retrievedDocuments.join(", ") || "none")
-            : null,
-          h("ol", {}, traceItems))
-        : null),
+    message({ from: "user", avatar: attacker ? "🕵️" : ICONS.identity[turn.identity] || "🙋", avatarClass: attacker ? "blue" : "neutral",
+      who: attackerWho, text: turn.request, attacker }),
+    turn.response !== undefined
+      ? message({ from: "assistant", avatar: "🤖", avatarClass: "red", who: "Red Cola assistant", text: turn.response, mode: turn.mode,
+        leak: leaked ? `${plural(leaked, "recipe piece")} leaked` : null,
+        trace: showTrace ? turn.trace : null, docs: showTrace ? turn.retrievedDocuments : null })
+      : message({ from: "assistant", avatar: "🤖", avatarClass: "red", who: "Red Cola assistant", text: null }),
   ];
 }
 
-function indicators(result, { showUtility }) {
+// Adds "how many new pieces leaked this turn" for the leak tag.
+function withLeaks(turns) {
+  let before = 0;
+  return turns.map((t) => {
+    const enriched = { ...t, newlyDisclosed: t.fragmentsObtained - before };
+    before = t.fragmentsObtained;
+    return enriched;
+  });
+}
+
+function hud(result, { perspective }) {
   const c = result.confidentiality;
-  const exposure = {
-    none: ["status-good", "✓ No disclosure", "The recipe stayed protected."],
-    fragment: ["status-warn", `⚠ Partial disclosure: ${c.disclosed.length} of ${c.total} pieces`, `Disclosed: ${c.disclosed.join(", ")}.`],
-    full: ["status-bad", "✕ Full recipe disclosed", `Disclosed: ${c.disclosed.join(", ")}.`],
+  const taken = c.disclosed.length;
+  const vault = {
+    none: ["good", "Recipe safe", "No recipe piece left the vault."],
+    fragment: ["warn", `${taken} of ${c.total} pieces leaked`, `Leaked: ${c.disclosed.join(", ")}.`],
+    full: ["bad", "Full recipe leaked", `Leaked: ${c.disclosed.join(", ")}.`],
   }[c.exposure];
 
   const u = result.utility;
-  const utility = !showUtility || u.executed === 0
-    ? ["", "Not measured", "No legitimate request was checked in this round."]
+  const utility = perspective === "blue" || u.executed === 0
+    ? ["", "Not measured", "No legitimate request was checked in this round.", null]
     : u.completed === u.executed
-      ? ["status-good", `✓ ${u.completed} of ${u.executed} completed`, "Legitimate work still gets done."]
-      : ["status-bad", `✕ ${u.completed} of ${u.executed} completed`, "The defenses blocked legitimate work."];
+      ? ["good", `${u.completed} of ${u.executed} served`, "Legitimate work still gets done.", 1]
+      : ["bad", `${u.completed} of ${u.executed} served`, "Your defenses blocked legitimate work.", u.completed / u.executed];
 
   const cost = result.operationalCost;
-  const parts = [
-    cost.verifications && plural(cost.verifications, "permission check"),
-    cost.blocks && plural(cost.blocks, "block"),
-    cost.humanReviews && plural(cost.humanReviews, "human review"),
+  const effortChips = [
+    cost.verifications && `🪪 ${plural(cost.verifications, "permission check")}`,
+    cost.blocks && `⛔ ${plural(cost.blocks, "block")}`,
+    cost.humanReviews && `👀 ${plural(cost.humanReviews, "human review")}`,
   ].filter(Boolean);
-  const costValue = parts.length ? parts.join(" · ") : "No extra effort";
 
-  const tile = (label, [status, value, detail]) =>
-    h("div", { class: `indicator ${status}` },
-      h("div", { class: "label" }, label),
-      h("div", { class: "value" }, value),
-      h("div", { class: "detail" }, detail));
-
-  return h("div", { class: "indicators", role: "group", "aria-label": "Outcome indicators" },
-    tile("Confidentiality", exposure),
-    tile("Utility", utility),
-    tile("Operational cost", ["", costValue, "Simulated effort the protection required."]));
+  return h("div", { class: "hud", role: "group", "aria-label": "Outcome indicators" },
+    h("div", { class: `stat ${vault[0]}` },
+      h("div", { class: "label" }, "🔐 Confidentiality"),
+      h("div", { class: "value" }, vault[1]),
+      caps(c.total, taken, { reveal: true }),
+      h("div", { class: "detail" }, vault[2])),
+    h("div", { class: `stat ${utility[0]}` },
+      h("div", { class: "label" }, "🤝 Utility"),
+      h("div", { class: "value" }, utility[1]),
+      utility[3] != null ? h("div", { class: "meter", "aria-hidden": "true" }, h("span", { style: { width: `${utility[3] * 100}%` } })) : null,
+      h("div", { class: "detail" }, utility[2])),
+    h("div", { class: "stat" },
+      h("div", { class: "label" }, "⚙️ Operational cost"),
+      h("div", { class: "value" }, effortChips.length ? plural(cost.verifications + cost.blocks + cost.humanReviews, "event") : "No extra effort"),
+      effortChips.length ? h("div", { class: "effort" }, effortChips.map((c) => h("span", { class: "chip" }, c))) : null,
+      h("div", { class: "detail" }, "Simulated effort the protection required.")));
 }
 
-function lesson(result, { mitigation } = {}) {
-  return h("div", { class: "lesson" },
-    h("h3", {}, "What happened"),
-    h("p", {}, result.explanation),
-    h("h3", {}, "Which layer acted"),
-    result.actingDefenses.length
-      ? h("ul", {}, result.actingDefenses.map((d) =>
-        h("li", {}, h("strong", {}, d.title), ` (acts at: ${d.layer}). Limitation: ${d.limitation}`)))
-      : h("p", {}, "No defense acted. This is the vulnerable teaching example."),
-    mitigation ? [h("h3", {}, "Which mitigation could have helped"), h("p", {}, mitigation)] : null,
-    h("h3", {}, "What risk remains"),
-    h("p", {}, result.remainingRisk),
-    h("h3", {}, "Limitations to keep in mind"),
-    h("ul", {}, result.limitations.map((l) => h("li", {}, l))));
+function banner(result, { perspective }) {
+  const exposure = result.confidentiality.exposure;
+  const copy = perspective === "red"
+    ? {
+      none: ["good", "Vault secured", "Blue Cola walked away empty-handed."],
+      fragment: ["warn", "Partial leak", "Some of the recipe got out. Check which layer missed it."],
+      full: ["bad", "Recipe stolen!", "Blue Cola has the full recipe. Time to rethink the loadout."],
+    }
+    : {
+      none: ["bad", "Busted", "Red Cola's assistant gave nothing away."],
+      fragment: ["warn", "Partial loot", "You got some of the recipe, but not all of it."],
+      full: ["good", "Heist complete!", "You walked off with the full recipe."],
+    };
+  const [tone, stamp, line] = copy[exposure];
+  return h("div", { class: `result-banner ${tone}` },
+    h("div", { class: "stamp", id: `${perspective}-focus`, tabindex: "-1" }, stamp),
+    h("p", {}, line));
+}
+
+function debrief(result, { mitigation } = {}) {
+  return h("div", { class: "debrief" },
+    h("section", {}, h("h3", {}, "📋 What happened"), h("p", {}, result.explanation)),
+    h("section", {}, h("h3", {}, "🛡️ Layer that acted"),
+      result.actingDefenses.length
+        ? h("ul", {}, result.actingDefenses.map((d) => h("li", {}, h("strong", {}, d.title), ` (${d.layer}). ${d.limitation}`)))
+        : h("p", {}, "No defense acted. This is the vulnerable teaching example.")),
+    mitigation ? h("section", {}, h("h3", {}, "💡 What could have stopped it"), h("p", {}, mitigation)) : null,
+    h("section", {}, h("h3", {}, "⚠️ Risk that remains"), h("p", {}, result.remainingRisk)),
+    h("section", { class: "wide" }, h("h3", {}, "📌 Limits to remember"),
+      h("ul", {}, result.limitations.map((l) => h("li", {}, l)))));
 }
 
 function errorNotice(error) {
-  return h("p", { class: "notice error", role: "alert" }, error.message);
+  return error ? h("p", { class: "notice error", role: "alert" }, error.message) : null;
 }
 
-// --- Home ---------------------------------------------------------------------------
+// --- Home ----------------------------------------------------------------------------------
 
 function renderHome() {
   return [
-    h("section", { class: "hero" },
-      h("h1", {}, "Can the assistant help people without revealing secrets?"),
-      h("p", {}, "RED COLA, a fictional company, uses an AI assistant to answer questions from employees, suppliers and visitors. Its knowledge base holds a confidential recipe. BLUE COLA, a fictional competitor, wants it."),
-      h("p", { class: "muted" }, "Every response in this demo is scripted and labelled \"simulated\". It shows how risks and defenses work; it is not a test of a real model.")),
-    h("section", {},
-      h("h2", {}, "Choose your role"),
-      h("div", { class: "grid-2" },
-        h("button", { type: "button", class: "card role-card red", onclick: () => go("red") },
-          h("span", { class: "role-tag" }, "🛡️ RED COLA · Defend"),
-          h("strong", {}, "Protect the recipe and keep the assistant useful."),
-          h("span", { class: "muted" }, "Pick defenses, watch an automated attack, and compare configurations. Blocking everything does not count as winning.")),
-        h("button", { type: "button", class: "card role-card blue", onclick: () => go("blue") },
-          h("span", { class: "role-tag" }, "🎯 BLUE COLA · Attack"),
-          h("strong", {}, "Try to get the recipe, or part of it."),
-          h("span", { class: "muted" }, "Pick an attack, send it to RED COLA's assistant, and learn why it worked or failed.")))),
+    h("h1", { class: "visually-hidden" }, "Red Cola versus Blue Cola"),
+    h("div", { class: "versus" },
+      h("button", { type: "button", class: "side red", onclick: () => go("red") },
+        h("span", { class: "role-chip" }, "🛡️ Defender"),
+        h("span", { class: "wordmark script" }, "Red Cola"),
+        h("span", { class: "tagline" }, "Guard the secret recipe and keep your assistant helpful."),
+        h("span", { class: "cta" }, "Defend the vault →")),
+      h("div", { class: "vs-badge", "aria-hidden": "true" }, "VS"),
+      h("button", { type: "button", class: "side blue", onclick: () => go("blue") },
+        h("span", { class: "role-chip" }, "🕵️ Attacker"),
+        h("span", { class: "wordmark punch" }, "Blue Cola"),
+        h("span", { class: "tagline" }, "Trick Red Cola's AI assistant into spilling the recipe."),
+        h("span", { class: "cta" }, "Plan the heist →"))),
+    h("div", { class: "briefing" },
+      h("div", { class: "how" },
+        h("div", { class: "step" }, h("div", { class: "num" }, "01"), h("h3", {}, "Pick a side"),
+          h("p", {}, "Defend as Red Cola or attack as Blue Cola. Then swap and replay.")),
+        h("div", { class: "step" }, h("div", { class: "num" }, "02"), h("h3", {}, "Play your cards"),
+          h("p", {}, "Choose real-world attack tricks or defense layers. Each card shows its limits.")),
+        h("div", { class: "step" }, h("div", { class: "num" }, "03"), h("h3", {}, "Read the debrief"),
+          h("p", {}, "See what leaked, whether real work still got done, and what it cost."))),
+      h("div", { class: "vault" },
+        h("h3", {}, "🔐 The secret recipe"),
+        caps(3, 0),
+        h("p", {}, "Three secret pieces sit in Red Cola's knowledge base. The assistant can help with plenty, but who should ever see these?"),
+        h("p", {}, "Every response is scripted and labeled simulated. It shows how risks work; it is not a test of a real model."))),
   ];
 }
 
-// --- RED COLA: defend ------------------------------------------------------------------
+// --- RED COLA: defend --------------------------------------------------------------------------
 
 function renderRed() {
   const red = state.red;
   const { scenarios, defenses } = state.catalog;
   red.scenarioId ??= scenarios[0].id;
   const scenario = byId(scenarios, red.scenarioId);
+  const locked = red.busy;
 
-  const scenarioPicker = h("fieldset", { class: "red-theme" },
-    h("legend", {}, "1. Choose the attack you want to defend against"),
-    h("div", { class: "grid" }, scenarios.map((s) =>
+  const missions = h("fieldset", { class: "step-block red-zone", disabled: locked },
+    h("legend", {}, h("span", { class: "step-num" }, "1"), "Pick the threat"),
+    h("div", { class: "grid" }, scenarios.map((s, i) =>
       h("label", { class: "option" },
         h("input", {
           type: "radio", name: "red-scenario", value: s.id, checked: s.id === red.scenarioId,
           onchange: () => { red.scenarioId = s.id; red.rounds = []; render(); },
         }),
-        h("div", { class: "card" },
-          h("h3", {}, attackOf(s).title),
+        h("div", { class: "game-card" },
+          h("span", { class: "selected-flag" }, "Mission"),
+          h("div", { class: "card-top" },
+            h("span", { class: "card-kicker" }, `Threat ${pad(i + 1)}`),
+            h("span", { class: "card-icon", "aria-hidden": "true" }, ICONS.attack[s.attackId])),
+          h("h3", {}, `“${attackOf(s).title}”`),
           h("p", {}, s.summary),
-          h("div", { class: "meta" }, h("strong", {}, "Risk: "), attackOf(s).risk))))));
+          h("div", { class: "chips" },
+            h("span", { class: "chip" }, `${ICONS.identity[s.requesterRole]} ${s.requesterRole}`),
+            h("span", { class: "chip" }, plural(s.turns, "turn")),
+            h("span", { class: "chip risk" }, attackOf(s).risk)))))));
 
-  const defensePicker = h("fieldset", { class: "red-theme", id: "defenses" },
-    h("legend", {}, "2. Choose RED COLA's defenses"),
-    h("p", { class: "muted" }, "Select any combination, including none, to see the vulnerable teaching example."),
+  const loadout = h("fieldset", { class: "step-block red-zone", id: "loadout", disabled: locked },
+    h("legend", {}, h("span", { class: "step-num" }, "2"), "Build your loadout"),
+    h("p", { class: "step-hint" }, "Equip any mix of defenses, or none at all to see the vulnerable teaching example. Blocking everything doesn't count as winning: your assistant must stay useful."),
     h("div", { class: "grid" }, defenses.map((d) =>
       h("label", { class: "option" },
         h("input", {
           type: "checkbox", value: d.id, checked: red.defenseIds.has(d.id),
-          onchange: (event) => { event.target.checked ? red.defenseIds.add(d.id) : red.defenseIds.delete(d.id); },
+          onchange: (event) => {
+            event.target.checked ? red.defenseIds.add(d.id) : red.defenseIds.delete(d.id);
+            document.getElementById("loadout-count").textContent = loadoutCount();
+          },
         }),
-        h("div", { class: "card" },
+        h("div", { class: "game-card" },
+          h("span", { class: "selected-flag" }, "Equipped"),
+          h("div", { class: "card-top" },
+            h("span", { class: "card-kicker" }, `Layer · ${d.layer}`),
+            h("span", { class: "card-icon", "aria-hidden": "true" }, ICONS.defense[d.id])),
           h("h3", {}, d.title),
           h("p", {}, d.explanation),
-          h("div", { class: "meta" }, h("strong", {}, "Acts at: "), d.layer),
-          h("div", { class: "meta" }, h("strong", {}, "Limitation: "), d.limitation))))));
+          h("div", { class: "card-note" }, h("strong", {}, "Limit: "), d.limitation))))));
 
-  const runButton = h("button", { type: "button", class: "btn primary", disabled: red.busy, onclick: runRedRound },
-    red.busy ? "Running…" : "3. Run the attack");
+  const launch = h("div", { class: "step-block red-zone" },
+    stepTitle("3", "Face the attack"),
+    h("p", { class: "step-hint" }, `Blue Cola will play “${attackOf(scenario).title}” against your assistant, which is talking to a ${scenario.requesterRole}.`),
+    h("div", { class: "actions" },
+      h("button", { type: "button", class: "btn primary big", disabled: red.busy, onclick: runRedRound },
+        red.busy ? "Attack in progress…" : "▶ Launch Blue Cola's attack"),
+      h("span", { class: "loadout-count", id: "loadout-count" }, loadoutCount()),
+      errorNotice(red.error)));
 
-  const latest = red.rounds.at(-1);
+  const shown = red.live || red.rounds.at(-1);
   return [
-    h("section", {},
-      h("h1", {}, "🛡️ RED COLA: defend the recipe"),
-      h("p", {}, "You run the company assistant. Protect the recipe ", h("em", {}, "and"), " keep it useful for authorized requests.")),
-    h("section", {}, scenarioPicker),
-    h("section", {},
-      h("p", { class: "context-line" }, "In this scenario the assistant is talking to someone identified by the service as: ",
-        h("strong", {}, scenario.requesterRole), ".")),
-    h("section", {}, defensePicker),
-    h("section", { class: "actions red-theme" }, runButton,
-      red.error ? errorNotice(red.error) : null),
-    latest ? renderRedRound(latest, scenario) : null,
-    red.rounds.length > 1 ? renderComparison(red.rounds) : null,
+    h("div", { class: "mode-hero red" },
+      h("div", {},
+        h("div", { class: "title" }, h("h1", { class: "wordmark script" }, "Red Cola"), h("span", { class: "subtitle" }, "Defender HQ")),
+        h("p", {}, "You run the company's AI assistant. Keep the secret recipe in the vault and keep helping the people who are allowed in.")),
+      h("span", { class: "hero-icon", "aria-hidden": "true" }, "🛡️")),
+    missions,
+    loadout,
+    launch,
+    shown ? renderRedRound(shown, scenario) : null,
+    red.rounds.length > 1 ? renderScoreboard(red.rounds) : null,
   ];
+}
+
+function loadoutCount() {
+  const n = state.red.defenseIds.size;
+  return `Loadout: ${n} of ${state.catalog.defenses.length} equipped`;
 }
 
 async function runRedRound() {
   const red = state.red;
-  red.busy = true;
-  red.error = null;
-  render();
+  const live = { number: red.rounds.length + 1, turns: [], pendingRequest: null, legitimate: null, pendingLegit: null, result: null };
+  Object.assign(red, { busy: true, error: null, live });
   try {
-    const defenseIds = [...red.defenseIds];
-    const session = await api.createSession("red", red.scenarioId, defenseIds);
-    const turns = [];
-    for (let i = 0; i < session.maxTurns; i++) turns.push(await api.turn(session.id));
-    const legitimate = await api.legitimate(session.id);
-    const result = await api.result(session.id);
-    red.rounds.push({ number: red.rounds.length + 1, turns, legitimate, result });
+    let session = await api.createSession("red", red.scenarioId, [...red.defenseIds]);
+    render();
+    document.getElementById("round")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+    while (session.nextRequest) {
+      live.pendingRequest = session.nextRequest;
+      render();
+      live.turns.push(await withTyping(api.turn(session.id)));
+      live.pendingRequest = null;
+      session = await api.session(session.id);
+    }
+    live.pendingLegit = session.legitimateRequest;
+    render();
+    live.legitimate = await withTyping(api.legitimate(session.id));
+    live.pendingLegit = null;
+    live.result = await api.result(session.id);
+    red.rounds.push(live);
   } catch (error) {
     red.error = error;
   } finally {
-    red.busy = false;
+    Object.assign(red, { busy: false, live: null });
     render();
-    document.getElementById("round-heading")?.focus();
+    document.getElementById("red-focus")?.focus();
   }
 }
 
 function renderRedRound(round, scenario) {
-  const { result, turns, legitimate } = round;
-  return h("section", { class: "stack", "aria-live": "polite" },
-    h("h2", { id: "round-heading", tabindex: "-1" }, `Round ${round.number} result`),
-    indicators(result, { showUtility: true }),
-    h("div", { class: "card stack" },
-      h("h3", {}, `The attack: ${attackOf(scenario).title}`),
-      h("div", { class: "exchange" }, turns.map((t) =>
-        exchangeTurn(t, { attackerLabel: `BLUE COLA (as ${scenario.requesterRole})`, showTrace: true })))),
-    h("div", { class: "card stack" },
-      h("h3", {}, "A legitimate request in the same configuration"),
-      h("div", { class: "exchange" },
-        exchangeTurn(legitimate, { attackerLabel: `${scenario.requesterRole} (legitimate request)`, showTrace: true })),
-      h("p", { class: "meta" }, legitimate.completed ? "✓ Completed" : "✕ Not completed")),
-    h("div", { class: "card" }, lesson(result)),
-    h("div", { class: "actions red-theme" },
-      h("button", { type: "button", class: "btn", onclick: () => document.getElementById("defenses").scrollIntoView({ behavior: "smooth" }) },
-        "Replay with other defenses"),
-      h("button", { type: "button", class: "btn", onclick: () => { state.blue.attackId = scenario.attackId; go("blue"); } },
-        "Try this attack as BLUE COLA")));
+  const { result, legitimate } = round;
+  const identity = scenario.requesterRole;
+  const turns = withLeaks(round.turns);
+  return h("section", { class: "round-block", id: "round", "aria-live": "polite" },
+    h("h2", { class: "section-title" }, `Round ${round.number}`),
+    result ? banner(result, { perspective: "red" }) : null,
+    result ? hud(result, { perspective: "red" }) : null,
+    h("div", { class: "arena" },
+      h("div", { class: "arena-head" },
+        h("h3", {}, `⚔️ The attack: “${attackOf(scenario).title}”`),
+        h("span", { class: "chip" }, `${ICONS.identity[identity]} Blue Cola, signed in as ${identity}`)),
+      h("div", { class: "chat" },
+        turns.map((t) => exchange(t, { attackerWho: `Blue Cola (as ${identity})`, showTrace: true })),
+        round.pendingRequest ? exchange({ request: round.pendingRequest }, { attackerWho: `Blue Cola (as ${identity})` }) : null)),
+    legitimate || round.pendingLegit
+      ? h("div", { class: "arena" },
+        h("div", { class: "arena-head" },
+          h("h3", {}, "✅ Utility check: a legitimate request"),
+          legitimate ? h("span", { class: `pill ${legitimate.completed ? "good" : "bad"}` }, legitimate.completed ? "✓ Served" : "✕ Blocked") : null),
+        h("div", { class: "chat" },
+          legitimate
+            ? exchange({ ...legitimate, identity }, { attackerWho: `${identity} (authorized)`, attacker: false, showTrace: true })
+            : exchange({ request: round.pendingLegit, identity }, { attackerWho: `${identity} (authorized)`, attacker: false })))
+      : null,
+    result ? debrief(result) : null,
+    result
+      ? h("div", { class: "actions red-zone" },
+        h("button", { type: "button", class: "btn primary", onclick: () => document.getElementById("loadout").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }) },
+          "↻ Try another loadout"),
+        h("button", { type: "button", class: "btn", onclick: () => { state.blue.attackId = scenario.attackId; newBlueAttempt(); go("blue"); } },
+          "🕵️ Play this attack as Blue Cola"))
+      : null);
 }
 
-function renderComparison(rounds) {
-  const exposureText = { none: "✓ None", fragment: "⚠ Partial", full: "✕ Full recipe" };
-  return h("section", {},
-    h("h2", {}, "Before and after"),
-    h("p", { class: "muted" }, "Same scenario and identity, different defenses."),
-    h("div", { class: "card table-scroll" },
-      h("table", { class: "compare" },
-        h("thead", {}, h("tr", {}, ["Round", "Defenses", "Confidentiality", "Utility", "Operational cost"].map((c) => h("th", { scope: "col" }, c)))),
+function renderScoreboard(rounds) {
+  const vault = {
+    none: ["good", "🔒 Safe"],
+    fragment: ["warn", "⚠ Partial leak"],
+    full: ["bad", "✕ Stolen"],
+  };
+  return h("section", { class: "round-block" },
+    h("h2", { class: "section-title" }, "🏆 Scoreboard: before and after"),
+    h("p", { class: "step-hint" }, "Same threat, same identity, different loadouts."),
+    h("div", { class: "arena table-scroll" },
+      h("table", { class: "scoreboard" },
+        h("thead", {}, h("tr", {}, ["Round", "Loadout", "Confidentiality", "Utility", "Operational cost"].map((c) => h("th", { scope: "col" }, c)))),
         h("tbody", {}, rounds.map(({ number, result }) => {
           const cost = result.operationalCost;
+          const [tone, text] = vault[result.confidentiality.exposure];
           return h("tr", {},
-            h("td", {}, number),
-            h("td", {}, result.selectedDefenses.join(", ") || "None"),
-            h("td", {}, exposureText[result.confidentiality.exposure]),
+            h("td", {}, `#${number}`),
+            h("td", {}, result.selectedDefenses.join(", ") || "Nothing equipped"),
+            h("td", {}, h("span", { class: `pill ${tone}` }, text)),
             h("td", {}, `${result.utility.completed} of ${result.utility.executed}`),
-            h("td", {}, `${cost.verifications + cost.blocks + cost.humanReviews} events`));
+            h("td", {}, plural(cost.verifications + cost.blocks + cost.humanReviews, "event")));
         })))));
 }
 
-// --- BLUE COLA: attack ---------------------------------------------------------------------
+// --- BLUE COLA: attack ---------------------------------------------------------------------------
 
 function renderBlue() {
   const blue = state.blue;
@@ -311,61 +445,75 @@ function renderBlue() {
   const pairedDefense = byId(defenses, attack.defenseId);
   const locked = Boolean(blue.session);
 
-  const attackPicker = h("fieldset", { class: "blue-theme", disabled: locked },
-    h("legend", {}, "1. Choose an attack"),
-    h("div", { class: "grid" }, attacks.map((a) =>
-      h("label", { class: "option" },
+  const moves = h("fieldset", { class: "step-block blue-zone", disabled: locked },
+    h("legend", {}, h("span", { class: "step-num" }, "1"), "Choose your trick"),
+    h("div", { class: "grid" }, attacks.map((a, i) => {
+      const scenario = scenarioForAttack(a.id);
+      return h("label", { class: "option" },
         h("input", {
           type: "radio", name: "blue-attack", value: a.id, checked: a.id === blue.attackId,
           onchange: () => { blue.attackId = a.id; render(); },
         }),
-        h("div", { class: "card" },
-          h("h3", {}, a.title),
-          h("p", {}, a.explanation))))));
+        h("div", { class: "game-card" },
+          h("span", { class: "selected-flag" }, "Selected"),
+          h("div", { class: "card-top" },
+            h("span", { class: "card-kicker" }, `Trick ${pad(i + 1)}`),
+            h("span", { class: "card-icon", "aria-hidden": "true" }, ICONS.attack[a.id])),
+          h("h3", {}, `“${a.title}”`),
+          h("p", {}, a.explanation),
+          h("div", { class: "chips" },
+            h("span", { class: "chip" }, `${ICONS.identity[scenario.requesterRole]} You'll be a ${scenario.requesterRole}`),
+            h("span", { class: "chip" }, plural(scenario.turns, "move")))));
+    })));
 
-  const defenseChoice = h("fieldset", { class: "blue-theme", disabled: locked },
-    h("legend", {}, "2. How well is RED COLA defended?"),
-    h("div", { class: "grid-2" },
-      [[false, "Undefended", "The vulnerable teaching example: no defenses active."],
-        [true, "Defended", `RED COLA uses: ${pairedDefense.title}.`]].map(([value, title, text]) =>
+  const difficulty = h("fieldset", { class: "step-block blue-zone", disabled: locked },
+    h("legend", {}, h("span", { class: "step-num" }, "2"), "Pick the difficulty"),
+    h("div", { class: "grid two" },
+      [[false, "😈 Easy", "Undefended", "Red Cola's assistant has no defenses. This is the vulnerable teaching example."],
+        [true, "🧠 Hard", "Defended", `Red Cola has equipped: ${pairedDefense.title}.`]].map(([value, kicker, title, text]) =>
         h("label", { class: "option" },
-          h("input", {
-            type: "radio", name: "blue-defended", checked: blue.defended === value,
-            onchange: () => { blue.defended = value; },
-          }),
-          h("div", { class: "card" }, h("h3", {}, title), h("p", {}, text))))));
+          h("input", { type: "radio", name: "blue-defended", checked: blue.defended === value, onchange: () => { blue.defended = value; } }),
+          h("div", { class: "game-card" },
+            h("span", { class: "selected-flag" }, "Selected"),
+            h("div", { class: "card-top" }, h("span", { class: "card-kicker" }, kicker)),
+            h("h3", {}, title),
+            h("p", {}, text))))));
 
   return [
-    h("section", {},
-      h("h1", {}, "🎯 BLUE COLA: get the recipe"),
-      h("p", {}, "You play a competitor talking to RED COLA's assistant. You only see what the assistant says back, not its documents.")),
-    h("section", {}, attackPicker),
-    h("section", {}, defenseChoice),
-    blue.session ? renderBlueAttempt(attack, pairedDefense) : h("section", { class: "actions blue-theme" },
-      h("button", { type: "button", class: "btn primary", disabled: blue.busy, onclick: startBlueAttempt }, "3. Start the attempt"),
-      blue.error ? errorNotice(blue.error) : null),
+    h("div", { class: "mode-hero blue" },
+      h("div", {},
+        h("div", { class: "title" }, h("h1", { class: "wordmark punch" }, "Blue Cola"), h("span", { class: "subtitle" }, "Heist Ops")),
+        h("p", {}, "You're a competitor chatting with Red Cola's AI assistant. You can't see its documents, only what it says back. Can you get the recipe out?")),
+      h("span", { class: "hero-icon", "aria-hidden": "true" }, "🕵️")),
+    moves,
+    difficulty,
+    blue.session
+      ? renderBlueAttempt(attack, pairedDefense)
+      : h("div", { class: "step-block blue-zone" },
+        stepTitle("3", "Start the heist"),
+        h("div", { class: "actions" },
+          h("button", { type: "button", class: "btn primary big", disabled: blue.busy, onclick: startBlueAttempt }, "▶ Start the heist"),
+          errorNotice(blue.error))),
   ];
 }
 
 async function startBlueAttempt() {
   const blue = state.blue;
-  const scenario = scenarioForAttack(blue.attackId);
   const attack = byId(state.catalog.attacks, blue.attackId);
   await blueAction(async () => {
-    blue.session = await api.createSession("blue", scenario.id, blue.defended ? [attack.defenseId] : []);
-    blue.turns = [];
-    blue.result = null;
-  });
+    blue.session = await api.createSession("blue", scenarioForAttack(blue.attackId).id, blue.defended ? [attack.defenseId] : []);
+    Object.assign(blue, { turns: [], result: null, pending: null });
+  }, () => document.getElementById("heist")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }));
 }
 
 async function sendBlueTurn() {
   const blue = state.blue;
+  blue.pending = blue.session.nextRequest;
   await blueAction(async () => {
-    const turn = await api.turn(blue.session.id);
-    blue.turns.push(turn);
-    blue.session = { ...blue.session, turn: turn.turn, nextRequest: null };
-    if (turn.finished) blue.result = await api.result(blue.session.id);
-    else blue.session = await call("GET", `/api/sessions/${blue.session.id}`);
+    blue.turns.push(await withTyping(api.turn(blue.session.id)));
+    blue.pending = null;
+    blue.session = await api.session(blue.session.id);
+    if (!blue.session.nextRequest) blue.result = await api.result(blue.session.id);
   });
 }
 
@@ -373,17 +521,16 @@ async function replayBlue() {
   const blue = state.blue;
   await blueAction(async () => {
     blue.session = await api.reset(blue.session.id);
-    blue.turns = [];
-    blue.result = null;
+    Object.assign(blue, { turns: [], result: null, pending: null });
   });
 }
 
 function newBlueAttempt() {
-  Object.assign(state.blue, { session: null, turns: [], result: null, error: null });
-  render();
+  Object.assign(state.blue, { session: null, turns: [], result: null, pending: null, error: null });
+  if (state.view === "blue") render();
 }
 
-async function blueAction(action) {
+async function blueAction(action, after) {
   const blue = state.blue;
   blue.busy = true;
   blue.error = null;
@@ -392,9 +539,11 @@ async function blueAction(action) {
     await action();
   } catch (error) {
     blue.error = error;
+    blue.pending = null;
   } finally {
     blue.busy = false;
     render();
+    after?.();
     document.getElementById("blue-focus")?.focus();
   }
 }
@@ -405,51 +554,50 @@ function renderBlueAttempt(attack, pairedDefense) {
   const scenario = byId(state.catalog.scenarios, session.scenarioId);
   const obtained = blue.turns.at(-1)?.fragmentsObtained ?? 0;
   const total = scenario.fragmentCount;
+  const turns = withLeaks(blue.turns);
 
-  const progress = h("div", { class: "card" },
-    h("h3", {}, "Your progress"),
-    h("div", { class: "progress", "aria-hidden": "true" },
-      Array.from({ length: total }, (_, i) => h("span", { class: i < obtained ? "on" : "" }))),
-    h("p", { class: "meta", role: "status" }, `Recipe pieces obtained: ${obtained} of ${total}. Turn ${session.turn} of ${session.maxTurns}.`));
+  const opsBar = h("div", { class: "ops-bar" },
+    h("div", { class: "cover" }, `${ICONS.identity[session.identity]} Red Cola sees you as a `, h("strong", {}, session.identity),
+      ". Saying otherwise in chat won't change that."),
+    h("div", {}, caps(total, obtained),
+      h("div", { class: "caps-label", role: "status" }, `Loot: ${obtained} of ${total} recipe pieces`)),
+    h("div", { class: "turn-dots" }, "Moves",
+      Array.from({ length: session.maxTurns }, (_, i) => h("i", { class: i < blue.turns.length ? "done" : "" })),
+      `${blue.turns.length}/${session.maxTurns}`));
 
-  const exchange = h("div", { class: "exchange" },
-    blue.turns.map((t) => exchangeTurn(t, { attackerLabel: "You (BLUE COLA)", showTrace: Boolean(blue.result) })));
-
-  const next = !blue.result && session.nextRequest
-    ? h("div", { class: "card stack blue-theme" },
-      h("h3", { id: "blue-focus", tabindex: "-1" }, blue.turns.length ? "Your next message" : "Your message"),
-      h("div", { class: "bubble user" }, h("p", { class: "text" }, session.nextRequest)),
-      h("div", { class: "actions" },
-        h("button", { type: "button", class: "btn primary", disabled: blue.busy, onclick: sendBlueTurn },
-          blue.busy ? "Sending…" : "Send this message"),
-        blue.error ? errorNotice(blue.error) : null))
-    : null;
+  const arena = h("div", { class: "arena" },
+    h("div", { class: "arena-head" },
+      h("h3", {}, `${ICONS.attack[attack.id]} “${attack.title}”`),
+      h("span", { class: "chip" }, blue.defended ? `🧠 Hard: ${pairedDefense.title}` : "😈 Easy: undefended")),
+    h("div", { class: "chat" },
+      turns.length || blue.pending ? null : h("p", { class: "muted" }, "Your chat with Red Cola's assistant will appear here."),
+      turns.map((t) => exchange(t, { attackerWho: "You (Blue Cola)", showTrace: Boolean(blue.result) })),
+      blue.pending ? exchange({ request: blue.pending }, { attackerWho: "You (Blue Cola)" }) : null),
+    !blue.result && !blue.pending && session.nextRequest
+      ? h("div", { class: "move-card" },
+        h("h3", { id: "blue-focus", tabindex: "-1" }, `🃏 Move ${blue.turns.length + 1}: your message`),
+        h("blockquote", {}, `“${session.nextRequest}”`),
+        h("div", { class: "actions blue-zone" },
+          h("button", { type: "button", class: "btn primary", disabled: blue.busy, onclick: sendBlueTurn }, "Send ▶"),
+          errorNotice(blue.error)))
+      : null);
 
   const outcome = blue.result
-    ? h("section", { class: "stack", "aria-live": "polite" },
-      h("h2", { id: "blue-focus", tabindex: "-1" },
-        blue.result.confidentiality.exposure === "none" ? "The attempt failed" : "The attempt succeeded"),
-      indicators(blue.result, { showUtility: false }),
-      h("div", { class: "card" }, lesson(blue.result, {
-        mitigation: `${pairedDefense.title}: ${pairedDefense.explanation} Limitation: ${pairedDefense.limitation}`,
-      })),
-      h("div", { class: "actions blue-theme" },
-        h("button", { type: "button", class: "btn primary", onclick: replayBlue }, "Replay from the start"),
-        h("button", { type: "button", class: "btn", onclick: newBlueAttempt }, "Choose another attack"),
+    ? h("section", { class: "round-block", "aria-live": "polite" },
+      banner(blue.result, { perspective: "blue" }),
+      hud(blue.result, { perspective: "blue" }),
+      debrief(blue.result, { mitigation: `${pairedDefense.title}: ${pairedDefense.explanation} Limit: ${pairedDefense.limitation}` }),
+      h("div", { class: "actions blue-zone" },
+        h("button", { type: "button", class: "btn primary", onclick: replayBlue }, "↻ Replay from the start"),
+        h("button", { type: "button", class: "btn", onclick: newBlueAttempt }, "🃏 Choose another trick"),
         h("button", { type: "button", class: "btn", onclick: () => { state.red.scenarioId = scenario.id; state.red.rounds = []; go("red"); } },
-          "Defend against this as RED COLA")))
+          "🛡️ Defend against this as Red Cola")))
     : null;
 
-  return h("section", { class: "stack" },
-    h("p", { class: "context-line" }, "RED COLA's assistant identifies you as: ", h("strong", {}, session.identity),
-      ". Claims you make in a message don't change that."),
-    progress,
-    exchange,
-    next,
-    outcome);
+  return h("section", { class: "round-block", id: "heist" }, opsBar, arena, outcome);
 }
 
-// --- Start ------------------------------------------------------------------------------------
+// --- Start ------------------------------------------------------------------------------------------
 
 api.catalog()
   .then((catalog) => { state.catalog = catalog; render(); })
