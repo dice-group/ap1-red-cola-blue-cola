@@ -1,3 +1,3 @@
-# Motor
+# Engine
 
-Pendiente de implementación. Coordinar turnos, defensas, solicitudes legítimas, exposición acumulada y reinicio. Resolver el modo simulado mediante escenarios explícitos. Medir confidencialidad, utilidad y coste por separado; no inferir resultados únicamente a partir del texto visible.
+Pending implementation. Coordinate turns, defenses, legitimate requests, accumulated exposure, and resets. Resolve simulated mode through explicit scenarios. Measure confidentiality, utility, and cost separately; do not infer outcomes solely from visible text.

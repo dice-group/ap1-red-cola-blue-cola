@@ -1,3 +1,3 @@
-# Decisiones técnicas
+# Technical decisions
 
-Guardar una nota por decisión: contexto, opciones, decisión, motivos y consecuencias. Primera decisión pendiente: stack del MVP simulado.
+Keep one note per decision: context, options, decision, rationale, and consequences. First pending decision: the stack for the simulated MVP.

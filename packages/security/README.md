@@ -1,3 +1,3 @@
-# Controles de seguridad
+# Security controls
 
-Pendiente de implementación. Aplicar identidad y permisos antes de recuperar contexto; separar instrucciones de fuentes; revisar exposición acumulada y salida. Las tarjetas son descripciones educativas, no controles implementados. Una instrucción al modelo no sustituye autorización. El perfil vulnerable debe habilitarse explícitamente como simulación didáctica.
+Pending implementation. Apply identity and permissions before retrieving context; separate instructions from sources; review accumulated exposure and output. The cards are educational descriptions, not implemented controls. An instruction to the model does not replace authorization. The vulnerable profile must be explicitly enabled as a teaching simulation.

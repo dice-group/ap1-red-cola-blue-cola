@@ -1,3 +1,3 @@
-# Verificación prevista
+# Planned verification
 
-Sin pruebas ejecutables todavía. Al implementar, comprobar: permisos antes de recuperación; inyección de documentos; exposición entre turnos; transformación de contenido; utilidad para solicitudes permitidas; reinicio; igualdad de condiciones en comparaciones; ausencia de secretos en respuestas y trazas prematuras del atacante. Añadir pruebas de integración de ambos roles y accesibilidad cuando exista interfaz.
+No executable tests yet. Once implemented, verify: permissions before retrieval; document injection; exposure across turns; content transformation; utility for permitted requests; reset; equal conditions in comparisons; and the absence of secrets in the attacker's responses and premature traces. Add integration tests for both roles, and accessibility tests once an interface exists.

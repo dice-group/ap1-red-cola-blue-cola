@@ -137,6 +137,7 @@ The fictional recipe may be visible in the repository's public code. The goal is
 | content/defenses/catalog.json | Four defense cards |
 | content/knowledge-base/documents.json | Demo documents and recipe |
 | content/scenarios/README.md | Planned scenario contract |
+| content/scenarios/document-instruction.json | First scenario: vulnerable and protected cases |
 | tests/README.md | Verification plan |
 | .gitignore | Common exclusions and local secrets |
 

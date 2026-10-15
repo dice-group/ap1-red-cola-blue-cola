@@ -1,3 +1,3 @@
-# Adaptadores de IA
+# AI adapters
 
-Pendiente de implementación. Primera versión: adaptador simulado reproducible. Versión posterior: adaptador de modelo real con los mismos contratos. Recibir contexto ya autorizado. Informar del modo y errores sin sustituir silenciosamente resultados reales por simulados.
+Pending implementation. First version: a reproducible simulated adapter. Later version: a real model adapter using the same contracts. Receive context that has already been authorized. Report the mode and errors without silently replacing real outcomes with simulated ones.

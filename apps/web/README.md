@@ -1,3 +1,3 @@
-# Interfaz web
+# Web interface
 
-Pendiente de implementación. Incluir selección de rol, panel RED COLA, panel BLUE COLA, tarjetas, intercambio, comparación y resultados. Consumir contratos comunes; no evaluar permisos ni incluir receta confidencial en el bundle del visitante. Mostrar modo simulado o real y ofrecer explicación técnica opcional.
+Pending implementation. Include role selection, the RED COLA panel, the BLUE COLA panel, cards, the exchange, comparison, and results. Consume shared contracts; do not evaluate permissions or include the confidential recipe in the visitor's bundle. Show simulated or real mode and offer an optional technical explanation.
