@@ -7,7 +7,8 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 
 const state = {
   catalog: null,
-  view: "home",
+  side: "home",
+  screen: null,
   flipped: new Set(),
   red: { scenarioId: null, defenseIds: new Set(), rounds: [], live: null, busy: false, error: null },
   blue: { attackId: null, defended: false, session: null, turns: [], viewTurn: 0, result: null, busy: false, error: null },
@@ -88,28 +89,92 @@ const scenarioForAttack = (attackId) => state.catalog.scenarios.find((s) => s.at
 const attackOf = (scenario) => byId(state.catalog.attacks, scenario.attackId);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const pad = (n) => String(n).padStart(2, "0");
-const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
 
 // --- Navigation ------------------------------------------------------------------------
+// Each screen lives in the URL hash (#/red/loadout), so the browser's Back button works.
 
-function go(view) {
-  state.view = view;
+const FLOWS = {
+  red: [["threat", "Threat"], ["loadout", "Loadout"], ["match", "Match"], ["debrief", "Debrief"]],
+  blue: [["trick", "Trick"], ["difficulty", "Difficulty"], ["heist", "Heist"], ["debrief", "Debrief"]],
+};
+
+const currentRoute = () => location.hash.replace(/^#\/?/, "");
+
+function go(route) {
+  if (currentRoute() === route) onRoute();
+  else location.hash = `#/${route}`;
+}
+
+// The furthest screen of a flow that has something to show right now.
+function reachable(side) {
+  if (side === "red") return state.red.rounds.length ? 3 : state.red.live ? 2 : 1;
+  return state.blue.result ? 3 : state.blue.session ? 2 : 1;
+}
+
+function onRoute() {
+  const [side, screen] = currentRoute().split("/");
+  if (side in FLOWS) {
+    const ids = FLOWS[side].map(([id]) => id);
+    const wanted = Math.max(ids.indexOf(screen), 0);
+    const allowed = Math.min(wanted, reachable(side));
+    if (ids[allowed] !== screen) {
+      location.replace(`#/${side}/${ids[allowed]}`);
+      return;
+    }
+    Object.assign(state, { side, screen });
+  } else {
+    Object.assign(state, { side: "home", screen: null });
+  }
   render();
   main.focus({ preventScroll: true });
   window.scrollTo({ top: 0 });
 }
 
+window.addEventListener("hashchange", onRoute);
 document.querySelectorAll("[data-nav]").forEach((button) =>
-  button.addEventListener("click", () => go(button.dataset.nav)),
+  button.addEventListener("click", () => {
+    const side = button.dataset.nav;
+    go(side === "home" ? "" : `${side}/${FLOWS[side][0][0]}`);
+  }),
 );
 
 function render() {
   document.querySelectorAll("[data-nav]").forEach((button) => {
-    if (button.dataset.nav === state.view) button.setAttribute("aria-current", "page");
+    if (button.dataset.nav === state.side) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
   });
   const views = { home: renderHome, red: renderRed, blue: renderBlue };
-  main.replaceChildren(...[views[state.view]()].flat().filter(Boolean));
+  main.replaceChildren(...[views[state.side]()].flat(Infinity).filter(Boolean));
+}
+
+function stepper(side) {
+  const current = FLOWS[side].findIndex(([id]) => id === state.screen);
+  const max = reachable(side);
+  return h("ol", { class: `stepper ${side}-zone`, "aria-label": "Progress" }, FLOWS[side].map(([id, label], i) =>
+    h("li", {},
+      h("button", {
+        type: "button",
+        class: `step-pill${i === current ? " current" : i <= max ? " done" : ""}`,
+        disabled: state[side].busy || i > max || i === current,
+        "aria-current": i === current ? "step" : null,
+        onclick: () => go(`${side}/${id}`),
+      }, h("span", { class: "step-num" }, i + 1), h("span", { class: "step-label" }, label)))));
+}
+
+// A bar pinned to the bottom of the screen with the next action.
+function dock(info, ...actions) {
+  return h("div", { class: "dock" },
+    h("div", { class: "dock-info" }, info),
+    h("div", { class: "dock-actions" }, actions));
+}
+
+function modeHero(side) {
+  const red = side === "red";
+  return h("div", { class: `mode-hero compact ${side}` },
+    h("div", { class: "title" },
+      h("h1", { class: `wordmark ${red ? "script" : "punch"}` }, red ? "Red Cola" : "Blue Cola"),
+      h("span", { class: "subtitle" }, red ? "Defender HQ" : "Heist Ops")),
+    stepper(side));
 }
 
 // --- Cards --------------------------------------------------------------------------------
@@ -332,7 +397,7 @@ function hud(result, { perspective }) {
       h("div", { class: "label" }, "⚙️ Operational cost"),
       h("div", { class: "value" }, events ? plural(events, "event") : "No extra effort"),
       events
-        ? h("div", { class: "detail" }, `🪪 ${cost.verifications} checks · ⛔ ${cost.blocks} blocks · 👀 ${cost.humanReviews} reviews`)
+        ? h("div", { class: "detail" }, `🪪 ${plural(cost.verifications, "check")} · ⛔ ${plural(cost.blocks, "block")} · 👀 ${plural(cost.humanReviews, "review")}`)
         : null));
 }
 
@@ -355,23 +420,19 @@ function errorNotice(error) {
   return error ? h("p", { class: "notice error", role: "alert" }, error.message) : null;
 }
 
-function stepTitle(number, text) {
-  return h("h2", { class: "step-title" }, h("span", { class: "step-num" }, number), text);
-}
-
 // --- Home ------------------------------------------------------------------------------------
 
 function renderHome() {
   return [
     h("h1", { class: "visually-hidden" }, "Red Cola versus Blue Cola"),
     h("div", { class: "versus" },
-      h("button", { type: "button", class: "side red", onclick: () => go("red") },
+      h("button", { type: "button", class: "side red", onclick: () => go("red/threat") },
         h("span", { class: "role-chip" }, "🛡️ Defender"),
         h("span", { class: "wordmark script" }, "Red Cola"),
         h("span", { class: "tagline" }, "Guard the secret recipe. Stay helpful."),
         h("span", { class: "cta" }, "Defend the vault →")),
       h("div", { class: "vs-badge", "aria-hidden": "true" }, "VS"),
-      h("button", { type: "button", class: "side blue", onclick: () => go("blue") },
+      h("button", { type: "button", class: "side blue", onclick: () => go("blue/trick") },
         h("span", { class: "role-chip" }, "🕵️ Attacker"),
         h("span", { class: "wordmark punch" }, "Blue Cola"),
         h("span", { class: "tagline" }, "Trick the AI into spilling the recipe."),
@@ -392,76 +453,73 @@ function renderHome() {
 
 function renderRed() {
   const red = state.red;
-  const { scenarios, defenses } = state.catalog;
-  red.scenarioId ??= scenarios[0].id;
-  const scenario = byId(scenarios, red.scenarioId);
+  red.scenarioId ??= state.catalog.scenarios[0].id;
+  const scenario = byId(state.catalog.scenarios, red.scenarioId);
+  const screens = { threat: redThreat, loadout: redLoadout, match: redMatch, debrief: redDebrief };
+  return [modeHero("red"), screens[state.screen](scenario)];
+}
 
-  const threats = h("fieldset", { class: "step-block red-zone", disabled: red.busy },
-    h("legend", {}, h("span", { class: "step-num" }, "1"), "Pick the threat"),
-    h("div", { class: "grid" }, scenarios.map((s, i) => flipCard({
-      key: `threat-${s.id}`,
-      flag: "Mission",
-      input: { type: "radio", name: "red-scenario", value: s.id, checked: s.id === red.scenarioId,
-        onchange: () => { red.scenarioId = s.id; red.rounds = []; render(); } },
-      front: [cardTop(`Threat ${pad(i + 1)}`, ICONS.attack[s.attackId]),
-        h("h3", {}, `“${attackOf(s).title}”`),
-        h("div", { class: "chips" },
-          h("span", { class: "chip" }, `${ICONS.identity[s.requesterRole]} ${s.requesterRole}`),
-          h("span", { class: "chip" }, plural(s.turns, "move")))],
-      back: [cardTop("The setup"), h("p", {}, s.summary), h("span", { class: "chip risk" }, attackOf(s).risk)],
-    }))),
-    scene(scenario, { who: "Who's asking", hint: scenario.documents.some((d) => d.highlight) ? "⚠️ One document hides an instruction. Open it." : null }));
-
-  const loadout = h("fieldset", { class: "step-block red-zone", id: "loadout", disabled: red.busy },
-    h("legend", {}, h("span", { class: "step-num" }, "2"), "Build your loadout"),
-    h("p", { class: "step-hint" }, "Equip any mix, or none. Blocking everything doesn't win: you must stay useful."),
-    h("div", { class: "grid" }, defenses.map((d) => flipCard({
-      key: `defense-${d.id}`,
-      flag: "Equipped",
-      input: { type: "checkbox", value: d.id, checked: red.defenseIds.has(d.id),
-        onchange: (event) => {
-          event.target.checked ? red.defenseIds.add(d.id) : red.defenseIds.delete(d.id);
-          document.getElementById("loadout-count").textContent = loadoutCount();
-        } },
-      front: [cardTop(`Layer · ${d.layer}`, ICONS.defense[d.id]), h("h3", {}, d.title), h("p", {}, d.explanation)],
-      back: [cardTop("The catch"), h("p", { class: "card-note" }, h("strong", {}, "Limit: "), d.limitation)],
-    }))));
-
-  const launch = h("div", { class: "step-block red-zone" },
-    stepTitle("3", "Face the attack"),
-    h("div", { class: "actions" },
-      h("button", { type: "button", class: "btn primary big", disabled: red.busy, onclick: runRedRound },
-        red.busy ? "Attack in progress…" : "▶ Launch Blue Cola's attack"),
-      h("span", { class: "loadout-count", id: "loadout-count" }, loadoutCount()),
-      errorNotice(red.error)));
-
-  const shown = red.live || red.rounds.at(-1);
+function redThreat(scenario) {
+  const red = state.red;
   return [
-    h("div", { class: "mode-hero red" },
-      h("div", {},
-        h("div", { class: "title" }, h("h1", { class: "wordmark script" }, "Red Cola"), h("span", { class: "subtitle" }, "Defender HQ")),
-        h("p", {}, "Keep the recipe in the vault. Keep the assistant helpful.")),
-      h("span", { class: "hero-icon", "aria-hidden": "true" }, "🛡️")),
-    threats,
-    loadout,
-    launch,
-    shown ? renderRedRound(shown, scenario) : null,
-    red.rounds.length > 1 ? renderScoreboard(red.rounds) : null,
+    h("fieldset", { class: "step-block red-zone" },
+      h("legend", { class: "screen-title" }, "Pick the threat"),
+      h("p", { class: "step-hint" }, "Which trick will Blue Cola try on your assistant?"),
+      h("div", { class: "grid big" }, state.catalog.scenarios.map((s, i) => flipCard({
+        key: `threat-${s.id}`,
+        flag: "Mission",
+        input: { type: "radio", name: "red-scenario", value: s.id, checked: s.id === red.scenarioId,
+          onchange: () => { red.scenarioId = s.id; red.rounds = []; render(); } },
+        front: [cardTop(`Threat ${pad(i + 1)}`, ICONS.attack[s.attackId]),
+          h("h3", {}, `“${attackOf(s).title}”`),
+          h("p", {}, attackOf(s).explanation),
+          h("div", { class: "chips" },
+            h("span", { class: "chip" }, `${ICONS.identity[s.requesterRole]} ${s.requesterRole}`),
+            h("span", { class: "chip" }, plural(s.turns, "move")))],
+        back: [cardTop("The setup"), h("p", {}, s.summary), h("span", { class: "chip risk" }, attackOf(s).risk)],
+      })))),
+    scene(scenario, { who: "Who's asking", hint: scenario.documents.some((d) => d.highlight) ? "⚠️ One document hides an instruction. Open it." : null }),
+    dock(
+      [h("span", { class: "dock-icon", "aria-hidden": "true" }, ICONS.attack[scenario.attackId]), `“${attackOf(scenario).title}”`],
+      h("button", { type: "button", class: "btn primary big", onclick: () => go("red/loadout") }, "Next: loadout →")),
+  ];
+}
+
+function redLoadout() {
+  const red = state.red;
+  return [
+    h("fieldset", { class: "step-block red-zone" },
+      h("legend", { class: "screen-title" }, "Build your loadout"),
+      h("p", { class: "step-hint" }, "Equip any mix, or none. Blocking everything doesn't win: you must stay useful."),
+      h("div", { class: "grid big" }, state.catalog.defenses.map((d) => flipCard({
+        key: `defense-${d.id}`,
+        flag: "Equipped",
+        input: { type: "checkbox", value: d.id, checked: red.defenseIds.has(d.id),
+          onchange: (event) => {
+            event.target.checked ? red.defenseIds.add(d.id) : red.defenseIds.delete(d.id);
+            document.getElementById("loadout-count").textContent = loadoutCount();
+          } },
+        front: [cardTop(`Layer · ${d.layer}`, ICONS.defense[d.id]), h("h3", {}, d.title), h("p", {}, d.explanation)],
+        back: [cardTop("The catch"), h("p", { class: "card-note" }, h("strong", {}, "Limit: "), d.limitation)],
+      })))),
+    dock(
+      h("span", { id: "loadout-count" }, loadoutCount()),
+      h("button", { type: "button", class: "btn", onclick: () => go("red/threat") }, "← Back"),
+      h("button", { type: "button", class: "btn primary big", onclick: runRedRound }, "▶ Launch the attack")),
   ];
 }
 
 function loadoutCount() {
-  return `Loadout: ${state.red.defenseIds.size} of ${state.catalog.defenses.length} equipped`;
+  return `🛡️ ${state.red.defenseIds.size} of ${state.catalog.defenses.length} equipped`;
 }
 
 async function runRedRound() {
   const red = state.red;
   const live = { number: red.rounds.length + 1, turns: [], viewTurn: 0, legitimate: null, result: null };
   Object.assign(red, { busy: true, error: null, live });
+  go("red/match");
   try {
     let session = await api.createSession("red", red.scenarioId, [...red.defenseIds]);
-    render();
-    scrollTo("round");
     while (session.nextRequest) {
       const turn = await api.turn(session.id);
       live.turns.push(turn);
@@ -478,37 +536,54 @@ async function runRedRound() {
   } finally {
     Object.assign(red, { busy: false, live: null });
     render();
-    document.getElementById("red-focus")?.focus();
+    document.getElementById("red-next")?.focus();
   }
 }
 
-function renderRedRound(round, scenario) {
-  const identity = scenario.requesterRole;
+function redMatch(scenario) {
+  const red = state.red;
+  const round = red.live || red.rounds.at(-1);
+  const back = h("button", { type: "button", class: "btn", onclick: () => go("red/loadout") }, "← Back to loadout");
+  if (!round) return [errorNotice(red.error), dock("", back)];
   const turn = round.turns[round.viewTurn];
-  const { result, legitimate } = round;
-  return h("section", { class: "round-block", id: "round" },
-    h("h2", { class: "section-title" }, `Round ${round.number}`),
-    result ? banner(result, { perspective: "red" }) : null,
-    h("div", { class: "arena" },
+  return [
+    h("section", { class: "arena match" },
       h("div", { class: "arena-head" },
-        h("h3", {}, `⚔️ “${attackOf(scenario).title}”`),
+        h("h2", {}, `⚔️ Round ${round.number}: “${attackOf(scenario).title}”`),
         moveTabs(round.turns, round.viewTurn, (i) => { round.viewTurn = i; render(); })),
-      turn ? stage(turn, scenario, { attackerWho: `Blue Cola (as ${identity})` }) : h("p", { class: "muted" }, "Blue Cola is getting ready…")),
-    legitimate
-      ? h("div", { class: `utility-line ${legitimate.completed ? "good" : "bad"}` },
-        h("span", { class: "card-kicker" }, "🤝 Utility check"),
-        h("span", {}, `A ${identity} asks “${legitimate.request}”`),
-        h("span", { class: "muted" }, `→ “${legitimate.response}”`),
-        h("span", { class: `pill ${legitimate.completed ? "good" : "bad"}` }, legitimate.completed ? "✓ Served" : "✕ Blocked"))
-      : null,
-    result ? hud(result, { perspective: "red" }) : null,
-    result ? lesson(result) : null,
-    result
-      ? h("div", { class: "actions red-zone" },
-        h("button", { type: "button", class: "btn primary", onclick: () => scrollTo("loadout") }, "↻ Try another loadout"),
-        h("button", { type: "button", class: "btn", onclick: () => { state.blue.attackId = scenario.attackId; newBlueAttempt(); go("blue"); } },
-          "🕵️ Play this as Blue Cola"))
-      : null);
+      turn ? stage(turn, scenario, { attackerWho: `Blue Cola (as ${scenario.requesterRole})` })
+        : h("p", { class: "muted" }, "Blue Cola is getting ready…")),
+    errorNotice(red.error),
+    dock(
+      red.busy ? "⏳ Attack in progress… watch the checkpoints" : "✅ Round over. Replay any move, or see how you did.",
+      red.busy ? null : back,
+      red.busy ? null : h("button", { type: "button", id: "red-next", class: "btn primary big", onclick: () => go("red/debrief") }, "See the debrief →")),
+  ];
+}
+
+function redDebrief(scenario) {
+  const round = state.red.rounds.at(-1);
+  return [
+    banner(round.result, { perspective: "red" }),
+    hud(round.result, { perspective: "red" }),
+    utilityLine(round.legitimate, scenario.requesterRole),
+    lesson(round.result),
+    state.red.rounds.length > 1 ? renderScoreboard(state.red.rounds) : null,
+    dock(
+      `Round ${round.number} · ${round.result.selectedDefenses.length ? plural(round.result.selectedDefenses.length, "defense") : "no defenses"}`,
+      h("button", { type: "button", class: "btn", onclick: () => go("red/threat") }, "New threat"),
+      h("button", { type: "button", class: "btn", onclick: () => { state.blue.attackId = scenario.attackId; newBlueAttempt(); go("blue/difficulty"); } },
+        "🕵️ Play as Blue Cola"),
+      h("button", { type: "button", class: "btn primary big", onclick: () => go("red/loadout") }, "↻ Try another loadout")),
+  ];
+}
+
+function utilityLine(legitimate, identity) {
+  return h("div", { class: `utility-line ${legitimate.completed ? "good" : "bad"}` },
+    h("span", { class: "card-kicker" }, "🤝 Utility check"),
+    h("span", {}, `A ${identity} asks “${legitimate.request}”`),
+    h("span", { class: "muted" }, `→ “${legitimate.response}”`),
+    h("span", { class: `pill ${legitimate.completed ? "good" : "bad"}` }, legitimate.completed ? "✓ Served" : "✕ Blocked"));
 }
 
 function renderScoreboard(rounds) {
@@ -534,62 +609,69 @@ function renderScoreboard(rounds) {
 
 function renderBlue() {
   const blue = state.blue;
-  const { attacks, defenses } = state.catalog;
-  blue.attackId ??= attacks[0].id;
-  const attack = byId(attacks, blue.attackId);
-  const scenario = scenarioForAttack(attack.id);
-  const pairedDefense = byId(defenses, attack.defenseId);
-  const locked = Boolean(blue.session);
+  blue.attackId ??= state.catalog.attacks[0].id;
+  const attack = byId(state.catalog.attacks, blue.attackId);
+  const pairedDefense = byId(state.catalog.defenses, attack.defenseId);
+  const screens = { trick: blueTrick, difficulty: blueDifficulty, heist: blueHeist, debrief: blueDebrief };
+  return [modeHero("blue"), screens[state.screen](attack, pairedDefense)];
+}
 
-  const tricks = h("fieldset", { class: "step-block blue-zone", disabled: locked },
-    h("legend", {}, h("span", { class: "step-num" }, "1"), "Choose your trick"),
-    h("div", { class: "grid" }, attacks.map((a, i) => {
-      const s = scenarioForAttack(a.id);
-      return flipCard({
-        key: `trick-${a.id}`,
-        flag: "Selected",
-        input: { type: "radio", name: "blue-attack", value: a.id, checked: a.id === blue.attackId,
-          onchange: () => { blue.attackId = a.id; render(); } },
-        front: [cardTop(`Trick ${pad(i + 1)}`, ICONS.attack[a.id]),
-          h("h3", {}, `“${a.title}”`),
-          h("div", { class: "chips" },
-            h("span", { class: "chip" }, `${ICONS.identity[s.requesterRole]} as ${s.requesterRole}`),
-            h("span", { class: "chip" }, plural(s.turns, "move")))],
-        back: [cardTop("The plan"), h("p", {}, a.explanation), h("p", { class: "card-note" }, s.summary)],
-      });
-    })),
+function blueTrick(attack) {
+  const blue = state.blue;
+  const scenario = scenarioForAttack(attack.id);
+  return [
+    h("fieldset", { class: "step-block blue-zone" },
+      h("legend", { class: "screen-title" }, "Choose your trick"),
+      h("p", { class: "step-hint" }, "How will you get the recipe out of Red Cola's assistant?"),
+      h("div", { class: "grid big" }, state.catalog.attacks.map((a, i) => {
+        const s = scenarioForAttack(a.id);
+        return flipCard({
+          key: `trick-${a.id}`,
+          flag: "Selected",
+          input: { type: "radio", name: "blue-attack", value: a.id, checked: a.id === blue.attackId,
+            onchange: () => { newBlueAttempt(); blue.attackId = a.id; render(); } },
+          front: [cardTop(`Trick ${pad(i + 1)}`, ICONS.attack[a.id]),
+            h("h3", {}, `“${a.title}”`),
+            h("p", {}, a.explanation),
+            h("div", { class: "chips" },
+              h("span", { class: "chip" }, `${ICONS.identity[s.requesterRole]} as ${s.requesterRole}`),
+              h("span", { class: "chip" }, plural(s.turns, "move")))],
+          back: [cardTop("The plan"), h("p", {}, s.summary), h("span", { class: "chip risk" }, a.risk)],
+        });
+      }))),
     scene(scenario, {
       who: "Your cover",
       hint: scenario.documents.some((d) => d.highlight) ? "⚠️ You planted a hidden instruction in one document. Open it." : null,
-    }));
+    }),
+    dock(
+      [h("span", { class: "dock-icon", "aria-hidden": "true" }, ICONS.attack[attack.id]), `“${attack.title}”`],
+      h("button", { type: "button", class: "btn primary big", onclick: () => go("blue/difficulty") }, "Next: difficulty →")),
+  ];
+}
 
-  const difficulty = h("fieldset", { class: "step-block blue-zone", disabled: locked },
-    h("legend", {}, h("span", { class: "step-num" }, "2"), "Pick the difficulty"),
-    h("div", { class: "grid two" },
-      [[false, "😈 Easy", "Undefended", "No defenses. The vulnerable teaching example."],
-        [true, "🧠 Hard", "Defended", `Red Cola has equipped: ${pairedDefense.title}.`]].map(([value, kicker, title, text]) =>
+function blueDifficulty(attack, pairedDefense) {
+  const blue = state.blue;
+  const options = [
+    [false, "😈", "Easy", "Undefended", "Red Cola's assistant has no defenses. The vulnerable teaching example."],
+    [true, "🧠", "Hard", "Defended", `Red Cola has equipped: ${pairedDefense.title}.`],
+  ];
+  return [
+    h("fieldset", { class: "step-block blue-zone" },
+      h("legend", { class: "screen-title" }, "Pick the difficulty"),
+      h("p", { class: "step-hint" }, `Your trick: “${attack.title}”`),
+      h("div", { class: "grid big two" }, options.map(([value, icon, kicker, title, text]) =>
         h("div", { class: "card-slot" },
           h("label", { class: "option" },
-            h("input", { type: "radio", name: "blue-defended", checked: blue.defended === value, onchange: () => { blue.defended = value; } }),
+            h("input", { type: "radio", name: "blue-defended", checked: blue.defended === value,
+              onchange: () => { newBlueAttempt(); blue.defended = value; render(); } }),
             h("div", { class: "game-card" },
               h("span", { class: "selected-flag" }, "Selected"),
-              cardTop(kicker), h("h3", {}, title), h("p", {}, text)))))));
-
-  return [
-    h("div", { class: "mode-hero blue" },
-      h("div", {},
-        h("div", { class: "title" }, h("h1", { class: "wordmark punch" }, "Blue Cola"), h("span", { class: "subtitle" }, "Heist Ops")),
-        h("p", {}, "Chat with Red Cola's assistant and get the recipe out.")),
-      h("span", { class: "hero-icon", "aria-hidden": "true" }, "🕵️")),
-    tricks,
-    difficulty,
-    blue.session
-      ? renderBlueAttempt(attack, pairedDefense)
-      : h("div", { class: "step-block blue-zone" },
-        stepTitle("3", "Start the heist"),
-        h("div", { class: "actions" },
-          h("button", { type: "button", class: "btn primary big", disabled: blue.busy, onclick: startBlueAttempt }, "▶ Start the heist"),
-          errorNotice(blue.error))),
+              cardTop(kicker, icon), h("h3", {}, title), h("p", {}, text))))))),
+    dock(
+      blue.defended ? `🧠 Hard: ${pairedDefense.title}` : "😈 Easy: undefended",
+      h("button", { type: "button", class: "btn", onclick: () => go("blue/trick") }, "← Back"),
+      h("button", { type: "button", class: "btn primary big", disabled: blue.busy, onclick: startBlueAttempt }, "▶ Start the heist"),
+      errorNotice(blue.error)),
   ];
 }
 
@@ -600,7 +682,7 @@ async function startBlueAttempt() {
     blue.session = await api.createSession("blue", scenarioForAttack(blue.attackId).id, blue.defended ? [attack.defenseId] : []);
     Object.assign(blue, { turns: [], viewTurn: 0, result: null });
   });
-  scrollTo("heist");
+  if (blue.session) go("blue/heist");
 }
 
 async function sendBlueTurn() {
@@ -621,11 +703,11 @@ async function replayBlue() {
     blue.session = await api.reset(blue.session.id);
     Object.assign(blue, { turns: [], viewTurn: 0, result: null });
   });
+  go("blue/heist");
 }
 
 function newBlueAttempt() {
   Object.assign(state.blue, { session: null, turns: [], viewTurn: 0, result: null, error: null });
-  if (state.view === "blue") render();
 }
 
 async function blueAction(action) {
@@ -644,7 +726,7 @@ async function blueAction(action) {
   }
 }
 
-function renderBlueAttempt(attack, pairedDefense) {
+function blueHeist(attack, pairedDefense) {
   const blue = state.blue;
   const session = blue.session;
   const scenario = byId(state.catalog.scenarios, session.scenarioId);
@@ -661,38 +743,46 @@ function renderBlueAttempt(attack, pairedDefense) {
 
   const nextMove = !blue.result && !blue.busy && session.nextRequest
     ? h("div", { class: "move-card" },
-      h("h3", { id: "blue-focus", tabindex: "-1" }, `🃏 Move ${blue.turns.length + 1}`),
-      h("blockquote", {}, `“${session.nextRequest}”`),
-      h("div", { class: "actions blue-zone" },
-        h("button", { type: "button", class: "btn primary", onclick: sendBlueTurn }, "Send ▶"),
-        errorNotice(blue.error)))
+      h("h3", { id: "blue-focus", tabindex: "-1" }, `🃏 Move ${blue.turns.length + 1}: your message`),
+      h("blockquote", {}, `“${session.nextRequest}”`))
     : null;
 
-  const arena = h("div", { class: "arena" },
-    h("div", { class: "arena-head" },
-      h("h3", {}, `${ICONS.attack[attack.id]} “${attack.title}”`),
-      moveTabs(blue.turns, blue.viewTurn, (i) => { blue.viewTurn = i; render(); }),
-      h("span", { class: "chip" }, blue.defended ? `🧠 Hard: ${pairedDefense.title}` : "😈 Easy: undefended")),
-    turn ? stage(turn, scenario, { attackerWho: "You (Blue Cola)" }) : null,
-    nextMove);
+  return [
+    opsBar,
+    h("section", { class: "arena match" },
+      h("div", { class: "arena-head" },
+        h("h2", {}, `${ICONS.attack[attack.id]} “${attack.title}”`),
+        moveTabs(blue.turns, blue.viewTurn, (i) => { blue.viewTurn = i; render(); }),
+        h("span", { class: "chip" }, blue.defended ? `🧠 Hard: ${pairedDefense.title}` : "😈 Easy: undefended")),
+      turn ? stage(turn, scenario, { attackerWho: "You (Blue Cola)" }) : null,
+      nextMove),
+    dock(
+      blue.result ? "✅ Heist over. Replay any move, or see how you did." : blue.busy ? "⏳ Watch the checkpoints…" : "Your move.",
+      blue.result
+        ? h("button", { type: "button", id: "blue-focus", class: "btn primary big", onclick: () => go("blue/debrief") }, "See the debrief →")
+        : h("button", { type: "button", class: "btn primary big", disabled: blue.busy, onclick: sendBlueTurn }, "Send ▶"),
+      errorNotice(blue.error)),
+  ];
+}
 
-  const outcome = blue.result
-    ? h("section", { class: "round-block" },
-      banner(blue.result, { perspective: "blue" }),
-      hud(blue.result, { perspective: "blue" }),
-      lesson(blue.result, { mitigation: `${pairedDefense.title}. ${pairedDefense.explanation}` }),
-      h("div", { class: "actions blue-zone" },
-        h("button", { type: "button", class: "btn primary", onclick: replayBlue }, "↻ Replay"),
-        h("button", { type: "button", class: "btn", onclick: newBlueAttempt }, "🃏 Another trick"),
-        h("button", { type: "button", class: "btn", onclick: () => { state.red.scenarioId = scenario.id; state.red.rounds = []; go("red"); } },
-          "🛡️ Defend against this")))
-    : null;
-
-  return h("section", { class: "round-block", id: "heist" }, opsBar, arena, outcome);
+function blueDebrief(attack, pairedDefense) {
+  const blue = state.blue;
+  const scenario = byId(state.catalog.scenarios, blue.session.scenarioId);
+  return [
+    banner(blue.result, { perspective: "blue" }),
+    hud(blue.result, { perspective: "blue" }),
+    lesson(blue.result, { mitigation: `${pairedDefense.title}. ${pairedDefense.explanation}` }),
+    dock(
+      blue.defended ? "🧠 Hard mode" : "😈 Easy mode",
+      h("button", { type: "button", class: "btn", onclick: () => { newBlueAttempt(); go("blue/trick"); } }, "🃏 Another trick"),
+      h("button", { type: "button", class: "btn", onclick: () => { state.red.scenarioId = scenario.id; state.red.rounds = []; go("red/loadout"); } },
+        "🛡️ Defend against this"),
+      h("button", { type: "button", class: "btn primary big", onclick: replayBlue }, "↻ Replay")),
+  ];
 }
 
 // --- Start ---------------------------------------------------------------------------------------
 
 api.catalog()
-  .then((catalog) => { state.catalog = catalog; render(); })
+  .then((catalog) => { state.catalog = catalog; onRoute(); })
   .catch((error) => main.replaceChildren(errorNotice(error)));

@@ -28,6 +28,8 @@ Run `python3 -m apps.api`, open http://127.0.0.1:8000, and check:
 - [ ] During a turn, checkpoints light up one by one, the recipe card is stamped DENIED when the permission gate is equipped, and "What the assistant can see" glows red when the recipe gets in.
 - [ ] Tap a checkpoint after a turn: the narrator line explains what it did. Multi-turn attacks show move tabs.
 - [ ] Each card's ⓘ button flips it to show details, and flipping doesn't change the selection.
+- [ ] Each flow moves screen by screen, the browser's Back and Forward buttons move between screens, and the step bar is locked while an attack plays.
+- [ ] Opening a later screen directly (for example `#/red/debrief` in a fresh tab) lands on the furthest screen available.
 - [ ] The whole flow works with the keyboard only (Tab, Space, Enter), and focus is visible.
 - [ ] Outcomes can be read without color (✓, ⚠, ✕ and text).
 - [ ] The layout works at phone width and in dark mode.
