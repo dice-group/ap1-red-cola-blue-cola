@@ -40,6 +40,29 @@
     "allowedRoles": [
       "recipe-owner"
     ],
-    "text": "DEMO-RECIPE: water 900 ml; imaginary RUBY syrup 80 ml; fictional AZUR essence 20 ml. Educational data, not intended for consumption."
+    "text": "DEMO-RECIPE: water 900 ml; imaginary RUBY syrup 80 ml; fictional AZUR essence 20 ml. Educational data, not intended for consumption.",
+    "fragments": [
+      {
+        "id": "water",
+        "label": "Water quantity",
+        "matches": [
+          "900 ml"
+        ]
+      },
+      {
+        "id": "ruby-syrup",
+        "label": "RUBY syrup",
+        "matches": [
+          "RUBY"
+        ]
+      },
+      {
+        "id": "azur-essence",
+        "label": "AZUR essence",
+        "matches": [
+          "AZUR"
+        ]
+      }
+    ]
   }
 ]

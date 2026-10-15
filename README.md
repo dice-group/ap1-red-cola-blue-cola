@@ -9,7 +9,23 @@ An educational demo of AI safety risks and mitigation strategies for industry st
 
 ## Project status
 
-This repository contains the documentation and initial structure for developing the demo. It does not yet include a runnable application, model integrations, or implemented security controls. Code directories describe planned responsibilities; no framework has been selected.
+The simulated MVP is runnable: both roles, all four scenarios, before/after comparison, and the three outcome indicators. Responses are scripted and always labeled "simulated". Retrieval permissions and disclosure detection run for real in the security layer. No real model is connected yet.
+
+## Quick start
+
+Requires Python 3.10 or newer. There are no dependencies to install.
+
+```bash
+python3 -m apps.api
+```
+
+Open http://127.0.0.1:8000. Use `--port` to change the port.
+
+Run the tests:
+
+```bash
+python3 -m unittest discover -s tests -t .
+```
 
 ## The scenario
 
@@ -103,18 +119,20 @@ The results screen should explain what happened, which information was authorize
 
 The planned MVP uses predefined responses and outcomes. A later technical development stage may connect a real model through an adapter. In that case, the interface must display “real model,” record its configuration, and explain that results may vary. A simulated script does not demonstrate a real model's behavior.
 
-## Planned architecture
+## Architecture
 
 | Module | Responsibility |
 | --- | --- |
-| apps/web | Role selection, cards, interaction, results, and explanations |
-| apps/api | Sessions, scenario identity, and engine execution |
+| apps/web | Role selection, cards, interaction, results, and explanations (static HTML, CSS, and JavaScript) |
+| apps/api | Sessions, scenario identity, engine execution, and role-filtered JSON views |
 | packages/domain | Shared contracts: roles, actions, documents, traces, and results |
-| packages/engine | Turns, rules, resets, evaluation, and simulation |
-| packages/ai | Adapters for simulation and, later, real models |
-| packages/security | Retrieval permissions, instruction boundaries, and output review |
-| content | Educational catalogs and fictional documents |
-| tests | Future verification of scenarios, permissions, and flows |
+| packages/engine | Content loading and validation, turns, resets, evaluation, and simulation |
+| packages/ai | Assistant adapters: simulated now, real models later |
+| packages/security | Retrieval permissions and disclosure detection |
+| content | Educational catalogs, fictional documents, and scenario scripts |
+| tests | Content consistency, security, engine, and HTTP tests |
+
+The stack is recorded in [docs/decisions/0001-simulated-mvp-stack.md](docs/decisions/0001-simulated-mvp-stack.md).
 
 Planned flow: **identity and permissions → authorized retrieval → assistant → response review → educational outcome**.
 
@@ -124,33 +142,29 @@ The fictional recipe may be visible in the repository's public code. The goal is
 
 ## Repository structure
 
-| Path | Initial contents |
+| Path | Contents |
 | --- | --- |
 | README.md | Context, both phases, scope, and architecture |
 | CONTRIBUTING.md | Development and review guidance |
 | docs/architecture.md | Module boundaries and design rules |
 | docs/demo-flow.md | Walkthrough and acceptance criteria |
-| apps/web/README.md | Interface responsibilities |
-| apps/api/README.md | Service responsibilities |
-| packages/*/README.md | Responsibilities and future interfaces |
+| docs/decisions/ | Technical decision records |
+| apps/web/ | Web interface |
+| apps/api/ | HTTP service (`python3 -m apps.api`) |
+| packages/*/ | Domain, engine, AI adapters, and security controls |
 | content/attacks/catalog.json | Four attack cards |
 | content/defenses/catalog.json | Four defense cards |
 | content/knowledge-base/documents.json | Demo documents and recipe |
-| content/scenarios/README.md | Planned scenario contract |
-| content/scenarios/document-instruction.json | First scenario: vulnerable and protected cases |
-| tests/README.md | Verification plan |
+| content/scenarios/ | One scenario script per attack, plus the scenario contract |
+| tests/ | Automated tests and the manual demo checklist |
 | .gitignore | Common exclusions and local secrets |
 
-## Getting started with development
+## Next steps
 
-1. Read this README and docs/demo-flow.md.
-2. Review docs/architecture.md and agree on the stack in a documented decision.
-3. Implement the simulated engine and one complete scenario first.
-4. Add both interfaces using the same contracts.
-5. Complete the catalog and verify resets, permissions, utility, and explanations.
-6. Connect a real model only after establishing a reproducible baseline.
-
-There are no installation or run commands yet: dependencies and startup scripts have not been added.
+1. Rehearse the demo using the checklist in tests/README.md.
+2. Choose a license.
+3. Connect a real model through a new adapter in packages/ai, only after recording the decision. The interface must then display "real model" and its configuration.
+4. Optionally add tools and external destinations to illustrate information transfers.
 
 ## Communication and contribution principles
 

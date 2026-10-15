@@ -4,27 +4,41 @@
     "title": "Verify identity and permissions",
     "explanation": "Check authorization before retrieving documents.",
     "layer": "retrieval",
-    "limitation": "Identity must be assigned outside the chat; this card does not implement authentication."
+    "limitation": "Identity must be assigned outside the chat; this card does not implement authentication.",
+    "controls": [
+      "retrieval-permissions"
+    ]
   },
   {
     "id": "instruction-boundary",
     "title": "Separate documents from instructions",
     "explanation": "Treat sources as data and retrieve only authorized documents.",
     "layer": "context",
-    "limitation": "Separating instructions does not guarantee that a real model will resist every manipulation."
+    "limitation": "Separating instructions does not guarantee that a real model will resist every manipulation.",
+    "controls": [
+      "retrieval-permissions",
+      "instruction-separation"
+    ]
   },
   {
     "id": "least-privilege-history",
     "title": "Least privilege and history review",
     "explanation": "Limit accessible documents and review fragments exposed across turns.",
     "layer": "retrieval-and-session",
-    "limitation": "History review complements permissions and requires explicit exposure rules."
+    "limitation": "History review complements permissions and requires explicit exposure rules.",
+    "controls": [
+      "retrieval-permissions",
+      "history-review"
+    ]
   },
   {
     "id": "content-review",
     "title": "Review content in any format",
     "explanation": "Check for sensitive information in summaries, tables, and translations.",
     "layer": "output",
-    "limitation": "It can make mistakes; it does not replace restricting context before the model."
+    "limitation": "It can make mistakes; it does not replace restricting context before the model.",
+    "controls": [
+      "output-review"
+    ]
   }
 ]
