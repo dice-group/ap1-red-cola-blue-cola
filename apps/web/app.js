@@ -88,7 +88,6 @@ const byId = (list, id) => list.find((item) => item.id === id);
 const scenarioForAttack = (attackId) => state.catalog.scenarios.find((s) => s.attackId === attackId);
 const attackOf = (scenario) => byId(state.catalog.attacks, scenario.attackId);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-const pad = (n) => String(n).padStart(2, "0");
 
 // --- Navigation ------------------------------------------------------------------------
 // Each screen lives in the URL hash (#/red/loadout), so the browser's Back button works.
@@ -197,10 +196,15 @@ function flipCard({ key, input, front, back, flag }) {
     }, flipped ? "↺" : "ⓘ"));
 }
 
-function cardTop(kicker, icon) {
-  return h("div", { class: "card-top" },
-    h("span", { class: "card-kicker" }, kicker),
-    icon ? h("span", { class: "card-icon", "aria-hidden": "true" }, icon) : null);
+// Card fronts stay minimal: a big icon, the title, and one quiet line.
+function cardFace({ icon, label, title, text, meta }) {
+  return [
+    icon ? h("span", { class: "card-emblem", "aria-hidden": "true" }, icon) : null,
+    label ? h("span", { class: "card-label" }, label) : null,
+    title ? h("h3", {}, title) : null,
+    text ? h("p", {}, text) : null,
+    meta ? h("p", { class: "card-meta" }, meta) : null,
+  ];
 }
 
 // --- Documents ------------------------------------------------------------------------------
@@ -465,18 +469,14 @@ function redThreat(scenario) {
     h("fieldset", { class: "step-block red-zone" },
       h("legend", { class: "screen-title" }, "Pick the threat"),
       h("p", { class: "step-hint" }, "Which trick will Blue Cola try on your assistant?"),
-      h("div", { class: "grid big" }, state.catalog.scenarios.map((s, i) => flipCard({
+      h("div", { class: "grid big" }, state.catalog.scenarios.map((s) => flipCard({
         key: `threat-${s.id}`,
         flag: "Mission",
         input: { type: "radio", name: "red-scenario", value: s.id, checked: s.id === red.scenarioId,
           onchange: () => { red.scenarioId = s.id; red.rounds = []; render(); } },
-        front: [cardTop(`Threat ${pad(i + 1)}`, ICONS.attack[s.attackId]),
-          h("h3", {}, `“${attackOf(s).title}”`),
-          h("p", {}, attackOf(s).explanation),
-          h("div", { class: "chips" },
-            h("span", { class: "chip" }, `${ICONS.identity[s.requesterRole]} ${s.requesterRole}`),
-            h("span", { class: "chip" }, plural(s.turns, "move")))],
-        back: [cardTop("The setup"), h("p", {}, s.summary), h("span", { class: "chip risk" }, attackOf(s).risk)],
+        front: cardFace({ icon: ICONS.attack[s.attackId], title: `“${attackOf(s).title}”`,
+          meta: `${ICONS.identity[s.requesterRole]} ${s.requesterRole} · ${plural(s.turns, "move")}` }),
+        back: cardFace({ label: "The setup", text: s.summary, meta: `Risk: ${attackOf(s).risk}` }),
       })))),
     scene(scenario, { who: "Who's asking", hint: scenario.documents.some((d) => d.highlight) ? "⚠️ One document hides an instruction. Open it." : null }),
     dock(
@@ -499,8 +499,8 @@ function redLoadout() {
             event.target.checked ? red.defenseIds.add(d.id) : red.defenseIds.delete(d.id);
             document.getElementById("loadout-count").textContent = loadoutCount();
           } },
-        front: [cardTop(`Layer · ${d.layer}`, ICONS.defense[d.id]), h("h3", {}, d.title), h("p", {}, d.explanation)],
-        back: [cardTop("The catch"), h("p", { class: "card-note" }, h("strong", {}, "Limit: "), d.limitation)],
+        front: cardFace({ icon: ICONS.defense[d.id], title: d.title, meta: `Acts at: ${d.layer}` }),
+        back: cardFace({ label: "How it works", text: d.explanation, meta: `Limit: ${d.limitation}` }),
       })))),
     dock(
       h("span", { id: "loadout-count" }, loadoutCount()),
@@ -623,20 +623,16 @@ function blueTrick(attack) {
     h("fieldset", { class: "step-block blue-zone" },
       h("legend", { class: "screen-title" }, "Choose your trick"),
       h("p", { class: "step-hint" }, "How will you get the recipe out of Red Cola's assistant?"),
-      h("div", { class: "grid big" }, state.catalog.attacks.map((a, i) => {
+      h("div", { class: "grid big" }, state.catalog.attacks.map((a) => {
         const s = scenarioForAttack(a.id);
         return flipCard({
           key: `trick-${a.id}`,
           flag: "Selected",
           input: { type: "radio", name: "blue-attack", value: a.id, checked: a.id === blue.attackId,
             onchange: () => { newBlueAttempt(); blue.attackId = a.id; render(); } },
-          front: [cardTop(`Trick ${pad(i + 1)}`, ICONS.attack[a.id]),
-            h("h3", {}, `“${a.title}”`),
-            h("p", {}, a.explanation),
-            h("div", { class: "chips" },
-              h("span", { class: "chip" }, `${ICONS.identity[s.requesterRole]} as ${s.requesterRole}`),
-              h("span", { class: "chip" }, plural(s.turns, "move")))],
-          back: [cardTop("The plan"), h("p", {}, s.summary), h("span", { class: "chip risk" }, a.risk)],
+          front: cardFace({ icon: ICONS.attack[a.id], title: `“${a.title}”`,
+            meta: `${ICONS.identity[s.requesterRole]} as ${s.requesterRole} · ${plural(s.turns, "move")}` }),
+          back: cardFace({ label: "The plan", text: s.summary, meta: `Risk: ${a.risk}` }),
         });
       }))),
     scene(scenario, {
@@ -666,7 +662,7 @@ function blueDifficulty(attack, pairedDefense) {
               onchange: () => { newBlueAttempt(); blue.defended = value; render(); } }),
             h("div", { class: "game-card" },
               h("span", { class: "selected-flag" }, "Selected"),
-              cardTop(kicker, icon), h("h3", {}, title), h("p", {}, text))))))),
+              cardFace({ icon, label: kicker, title, text }))))))),
     dock(
       blue.defended ? `🧠 Hard: ${pairedDefense.title}` : "😈 Easy: undefended",
       h("button", { type: "button", class: "btn", onclick: () => go("blue/trick") }, "← Back"),
