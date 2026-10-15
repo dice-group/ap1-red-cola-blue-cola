@@ -78,6 +78,7 @@ def _document(raw: dict) -> KnowledgeDocument:
     return KnowledgeDocument(
         raw["id"], raw["title"], raw["classification"], frozenset(raw["allowedRoles"]), raw["text"],
         tuple(Fragment(f["id"], f["label"], tuple(f["matches"])) for f in raw.get("fragments", ())),
+        raw.get("highlight"),
     )
 
 
@@ -137,6 +138,8 @@ def _validate(content: Content) -> None:
         unknown = document.allowed_roles - set(ACCESS_IDENTITIES)
         if unknown:
             problems.append(f"document {document.id}: unknown roles {sorted(unknown)}")
+        if document.highlight and document.highlight not in document.text:
+            problems.append(f"document {document.id}: highlight is not part of the text")
 
     for scenario in content.scenarios.values():
         where = f"scenario {scenario.id}"

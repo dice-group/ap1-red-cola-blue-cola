@@ -96,6 +96,7 @@ class KnowledgeDocument:
     allowed_roles: frozenset[str]
     text: str
     fragments: tuple[Fragment, ...] = ()
+    highlight: str | None = None  # a passage to point out, such as an embedded instruction
 
 
 # --- Scenarios ---------------------------------------------------------------

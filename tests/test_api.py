@@ -7,6 +7,7 @@ import urllib.error
 import urllib.request
 
 from apps.api.server import create_server
+from packages.engine import load_content
 
 RECIPE_MARKERS = ("RUBY", "AZUR", "DEMO-RECIPE")
 
@@ -58,18 +59,42 @@ class ApiTest(unittest.TestCase):
             status, _ = self.request("GET", path)
             self.assertEqual(status, 404, path)
 
-    def test_blue_trace_hides_internal_details_until_the_end(self):
-        session = self.json("POST", "/api/sessions", {"role": "blue", "scenarioId": "claimed-authority", "defenseIds": []}, 201)
-        turn = self.json("POST", f"/api/sessions/{session['id']}/turns")
-        self.assertNotIn("retrievedDocuments", turn)
-        self.assertTrue(all(set(t) == {"stage", "decision"} for t in turn["trace"]))
+    def test_catalog_shows_only_documents_the_requester_may_read(self):
+        catalog = self.json("GET", "/api/catalog")
+        content = load_content()
+        for scenario in catalog["scenarios"]:
+            identity = scenario["requesterRole"]
+            for doc in scenario["documents"]:
+                allowed = identity in content.documents[doc["id"]].allowed_roles
+                with self.subTest(scenario=scenario["id"], document=doc["id"]):
+                    self.assertEqual(doc["readable"], allowed)
+                    self.assertEqual(doc["text"] is not None, allowed)
+
+    def test_planted_instruction_is_visible_to_the_supplier(self):
+        catalog = self.json("GET", "/api/catalog")
+        scenario = next(s for s in catalog["scenarios"] if s["id"] == "document-instruction")
+        note = next(d for d in scenario["documents"] if d["id"] == "supplier-delivery-note")
+        self.assertIn(note["highlight"], note["text"])
+
+    def test_turn_views_carry_no_document_text(self):
+        for role, defenses in (("blue", ["verified-access"]), ("red", ["verified-access"])):
+            session = self.json("POST", "/api/sessions", {"role": role, "scenarioId": "claimed-authority", "defenseIds": defenses}, 201)
+            status, text = self.request("POST", f"/api/sessions/{session['id']}/turns")
+            self.assertEqual(status, 200)
+            for marker in RECIPE_MARKERS:
+                self.assertNotIn(marker, text)
+            turn = json.loads(text)
+            self.assertEqual([c["id"] for c in turn["checkpoints"]],
+                             ["identity", "retrieval", "context", "assistant", "session", "output"])
+            self.assertEqual({d["id"]: d["status"] for d in turn["documents"]}["fictional-recipe"], "blocked")
 
     def test_red_round_end_to_end(self):
         session = self.json("POST", "/api/sessions", {"role": "red", "scenarioId": "document-instruction", "defenseIds": ["instruction-boundary"]}, 201)
         self.assertEqual(session["identity"], "supplier")
         self.assertEqual(session["mode"], "simulated")
         turn = self.json("POST", f"/api/sessions/{session['id']}/turns")
-        self.assertNotIn("Fictional RED COLA recipe", turn["retrievedDocuments"])
+        gate = next(c for c in turn["checkpoints"] if c["id"] == "retrieval")
+        self.assertEqual((gate["equipped"], gate["tone"]), (True, "good"))
         self.json("POST", f"/api/sessions/{session['id']}/legitimate")
         result = self.json("GET", f"/api/sessions/{session['id']}/result")
         self.assertEqual(result["confidentiality"]["exposure"], "none")

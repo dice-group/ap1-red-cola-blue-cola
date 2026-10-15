@@ -33,7 +33,7 @@ Use the same contract through an adapter. Configuration and credentials stay on 
 
 ## Traces
 
-The final explanation may reveal the fictional recipe after the game ends. During the attempt, BLUE COLA does not receive the confidential knowledge base, the expected response, or traces that reveal secrets. RED COLA sees enough control decisions to understand the outcome.
+The final explanation may reveal the fictional recipe after the game ends. Neither role receives the expected response in advance, or the text of any document its scenario identity cannot read. Both roles see each turn as a pipeline of checkpoints (which documents the permission gate let through, and what each layer decided), because seeing where the secret is stopped is the lesson. Decisions and document titles reveal no secret content.
 
 ## Pending decisions
 

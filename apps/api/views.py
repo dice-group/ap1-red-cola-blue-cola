@@ -1,13 +1,29 @@
-"""Shape engine objects into JSON for each audience.
+"""Shape engine objects into JSON for the browser.
 
-The browser only ever receives what these functions return. Nothing here
-includes document text, scripted outcomes, or the recipe before a round ends.
+The browser only ever receives what these functions return. Document text is
+included only for documents the scenario's identity is allowed to read, so the
+confidential recipe never leaves the server unless a response leaks it.
 """
 
 from __future__ import annotations
 
-from packages.domain import GameRole, LegitimateResult, RoundResult, Session, TurnResult
+from packages.domain import Control, LegitimateResult, RoundResult, Scenario, Session, TurnResult
 from packages.engine import Content
+from packages.security import active_controls
+
+# The checkpoints a request passes through, in order. Each maps to an engine
+# trace stage and, if it is optional, to the control that switches it on.
+CHECKPOINTS = (
+    ("identity", "Identity", "🪪", None),
+    ("retrieval", "Permission gate", "🚧", Control.RETRIEVAL_PERMISSIONS),
+    ("context", "Instruction wall", "🧱", Control.INSTRUCTION_SEPARATION),
+    ("assistant", "Assistant", "🤖", None),
+    ("session", "History watch", "🕰️", Control.HISTORY_REVIEW),
+    ("output", "Output check", "🔍", Control.OUTPUT_REVIEW),
+)
+GOOD_DECISIONS = {"filtered", "separated", "not-followed", "not-trusted", "refused", "blocked", "flagged", "noted"}
+BAD_DECISIONS = {"unfiltered", "followed", "not-separated", "passed"}
+SILENT_DECISIONS = {"not-applied"}
 
 
 def catalog(content: Content) -> dict:
@@ -30,6 +46,7 @@ def catalog(content: Content) -> dict:
                 "requesterRole": s.requester_role,
                 "turns": s.max_turns,
                 "fragmentCount": len(content.fragments_of(s)),
+                "documents": _shelf(content, s),
             }
             for s in sorted(content.scenarios.values(), key=lambda s: list(content.attacks).index(s.attack_id))
         ],
@@ -53,24 +70,22 @@ def session(content: Content, s: Session) -> dict:
 
 
 def turn(content: Content, s: Session, result: TurnResult) -> dict:
-    view = {
+    scenario = content.scenarios[s.scenario_id]
+    candidates = scenario.attack_turns[result.turn - 1].candidate_document_ids
+    return {
         "turn": result.turn,
         "request": result.request,
         "response": result.response,
         "mode": result.mode.value,
         "exposure": result.exposure.value,
         "fragmentsObtained": len(s.disclosed_fragment_ids),
+        "newlyDisclosed": len(result.newly_disclosed_fragment_ids),
         "finished": result.finished,
+        "documents": [
+            {"id": d, "status": "retrieved" if d in result.retrieved_document_ids else "blocked"} for d in candidates
+        ],
+        "checkpoints": _checkpoints(content, s, result),
     }
-    if s.role is GameRole.RED:
-        # The defender sees which controls acted and what was retrieved.
-        view["retrievedDocuments"] = _titles(content, result.retrieved_document_ids)
-        view["trace"] = [_trace(t) for t in result.trace]
-        view["operationalEvents"] = [{"type": e.type, "summary": e.summary} for e in result.operational_events]
-    else:
-        # The attacker sees only which stages decided something, not what they saw.
-        view["trace"] = [{"stage": t.stage, "decision": t.decision} for t in result.trace]
-    return view
 
 
 def legitimate(content: Content, result: LegitimateResult) -> dict:
@@ -79,8 +94,6 @@ def legitimate(content: Content, result: LegitimateResult) -> dict:
         "response": result.response,
         "completed": result.completed,
         "mode": result.mode.value,
-        "retrievedDocuments": _titles(content, result.retrieved_document_ids),
-        "trace": [_trace(t) for t in result.trace],
     }
 
 
@@ -109,9 +122,41 @@ def round_result(content: Content, result: RoundResult) -> dict:
     }
 
 
-def _titles(content: Content, ids) -> list[str]:
-    return [content.documents[d].title for d in ids]
+def _shelf(content: Content, scenario: Scenario) -> list[dict]:
+    """Documents in play, with text only where the requester may read it."""
+    ids = dict.fromkeys(
+        d for request in (*scenario.attack_turns, scenario.legitimate_task.request)
+        for d in request.candidate_document_ids
+    )
+    shelf = []
+    for doc_id in ids:
+        document = content.documents[doc_id]
+        readable = scenario.requester_role in document.allowed_roles
+        shelf.append({
+            "id": document.id,
+            "title": document.title,
+            "classification": document.classification,
+            "readable": readable,
+            "text": document.text if readable else None,
+            "highlight": document.highlight if readable else None,
+        })
+    return shelf
 
 
-def _trace(t) -> dict:
-    return {"stage": t.stage, "summary": t.summary, "decision": t.decision}
+def _checkpoints(content: Content, s: Session, result: TurnResult) -> list[dict]:
+    controls = active_controls(content.defenses[d] for d in s.selected_defense_ids)
+    events = {t.stage: t for t in result.trace}
+    checkpoints = []
+    for stage, label, icon, control in CHECKPOINTS:
+        event = events.get(stage)
+        decision = event.decision if event and event.decision not in SILENT_DECISIONS else None
+        checkpoints.append({
+            "id": stage,
+            "label": label,
+            "icon": icon,
+            "equipped": control is None or control in controls,
+            "decision": decision,
+            "tone": "good" if decision in GOOD_DECISIONS else "bad" if decision in BAD_DECISIONS else "neutral",
+            "summary": event.summary if event else None,
+        })
+    return checkpoints
