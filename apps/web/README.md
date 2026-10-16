@@ -3,8 +3,10 @@
 Static HTML, CSS, and JavaScript served by the demo service, with no build step.
 
 **Look.** Two worlds that share one print language (ink outlines, hard offset shadows, square shapes, no soft gradients):
-- **Red Cola** is a vintage soda company's case file: cream paper, red halftone, manila folders, ruled notebooks, sticky-note clues and rubber-stamp verdicts.
-- **Blue Cola** is a spy's blueprint: a cobalt grid background, chalk-white type, and typewriter messages.
+- **Red Cola** is a vintage soda company's case file: a red halftone print sheet behind paper panels, manila folders, ruled notebooks, sticky-note clues and rubber-stamp verdicts.
+- **Blue Cola** is a spy's blueprint: a cobalt grid sheet behind paper panels, chalk-white type, and typewriter messages.
+
+Both sides follow the same rule: a strong world colour fills the background and the panels sit on top. Light and dark mode change the depth of that colour and the panels (paper or night print), not the identity of each side. The home page stays neutral paper because it shows both.
 The home page is a diagonal poster split between the two, with a square VS stamp.
 
 - **Home:** a split-screen versus page for picking a side, plus a short briefing.

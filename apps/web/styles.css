@@ -26,6 +26,8 @@
   --blue: #1f4fd8;
   --blue-deep: #13318c;
   --blueprint: #1b3d9e;
+  --redprint: #a8231a;
+  --halftone: rgb(0 0 0 / 0.16);
   --grid-line: rgb(255 255 255 / 0.09);
   --grid-major: rgb(255 255 255 / 0.17);
   --chalk: #edf2ff;
@@ -65,7 +67,7 @@
   --shadow-color: #000;
   --red: #e5372a;
   --blue: #4a76ff;
-  --blueprint: #10276e;
+  --blueprint: #10276e; --redprint: #5a120c; --halftone: rgb(0 0 0 / 0.3);
   --manila: #4a3b1f;
   --highlight: #8c6d00;
   --good: #52c47c;
@@ -87,7 +89,7 @@
     --shadow-color: #000;
     --red: #e5372a;
     --blue: #4a76ff;
-    --blueprint: #10276e;
+    --blueprint: #10276e; --redprint: #5a120c; --halftone: rgb(0 0 0 / 0.3);
     --manila: #4a3b1f;
     --highlight: #8c6d00;
     --good: #52c47c;
@@ -110,7 +112,17 @@ body {
   background-image: radial-gradient(var(--hairline) 1px, transparent 1.2px);
   background-size: 18px 18px;
 }
-body[data-side="red"] { --accent: var(--red); }
+body[data-side="red"] {
+  --accent: var(--red);
+  --on-bg: var(--on-color);
+  background-color: var(--redprint);
+  /* halftone print: the red counterpart of the blueprint grid */
+  background-image:
+    radial-gradient(var(--halftone) 1.6px, transparent 1.9px),
+    radial-gradient(var(--halftone) 1.6px, transparent 1.9px);
+  background-size: 14px 14px, 14px 14px;
+  background-position: 0 0, 7px 7px;
+}
 body[data-side="blue"] {
   --accent: var(--blue);
   --on-bg: var(--chalk);
@@ -274,7 +286,7 @@ main:focus { outline: none; }
   border: 3px solid var(--ink); border-radius: var(--r); box-shadow: var(--shadow-lg);
 }
 .mode-hero.red {
-  background-color: var(--red);
+  background-color: var(--red); /* brighter than the red print sheet behind it */
   background-image: radial-gradient(rgb(0 0 0 / 0.15) 1.3px, transparent 1.5px);
   background-size: 10px 10px;
 }
@@ -333,10 +345,11 @@ fieldset:disabled .option { cursor: not-allowed; opacity: 0.55; }
 .option input:focus-visible + .game-card { outline: 3px solid var(--mustard); outline-offset: 4px; }
 .option input:checked + .game-card {
   transform: translate(-3px, -3px);
-  box-shadow: 7px 7px 0 var(--accent);
-  background: linear-gradient(var(--surface), var(--surface)) padding-box, var(--accent) border-box;
   border-color: var(--accent);
+  outline: 3px solid var(--accent); outline-offset: -1px; /* a thicker accent edge without moving the content */
+  box-shadow: 7px 7px 0 var(--shadow-color);
 }
+.option input:checked:focus-visible + .game-card { outline-color: var(--mustard); outline-offset: 4px; }
 .selected-flag {
   position: absolute; top: -13px; left: 18px; display: none;
   font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
