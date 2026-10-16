@@ -313,10 +313,13 @@ function flipCard({ key, input, front, back, flag }) {
 
 // Card fronts stay minimal: a big icon, the title, and one quiet line.
 function cardFace({ icon, label, title, text, meta }) {
-  return [
-    icon ? sticker(icon) : null,
+  const heading = [
     label ? h("span", { class: "card-label" }, label) : null,
     title ? h("h3", {}, title) : null,
+  ];
+  return [
+    // The icon and the title share one row, so the card doesn't waste the space beside the icon.
+    icon ? h("div", { class: "card-head" }, sticker(icon), h("div", { class: "card-heading" }, heading)) : heading,
     text ? h("p", {}, text) : null,
     meta ? h("p", { class: "card-meta" }, meta) : null,
   ];
