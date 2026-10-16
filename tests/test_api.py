@@ -111,6 +111,16 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(rating("document-instruction", ["verified-access"])["best"], False)
         self.assertEqual(rating("partial-disclosure", [])["best"], False)
 
+    def test_investigation_case_file(self):
+        case = self.json("GET", "/api/scenarios/document-instruction/investigation")
+        self.assertEqual(case["title"], "The bottle-cap delivery note")
+        self.assertTrue(any(c["key"] for c in case["clues"]))
+        self.assertEqual(sum(r["correct"] for r in case["rootCauses"]), 1)
+        status, text = self.request("GET", "/api/scenarios/document-instruction/investigation")
+        for marker in RECIPE_MARKERS:
+            self.assertNotIn(marker, text)
+        self.json("GET", "/api/scenarios/nope/investigation", expect=404)
+
     def test_claimed_role_in_the_request_body_is_ignored(self):
         session = self.json("POST", "/api/sessions", {"role": "blue", "scenarioId": "claimed-authority", "defenseIds": [], "identity": "recipe-owner"}, 201)
         self.assertEqual(session["identity"], "visitor")

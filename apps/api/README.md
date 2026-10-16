@@ -10,6 +10,7 @@ The service creates and resets sessions, assigns the scenario's fictional identi
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | /api/catalog | Attack and defense cards, scenario summaries, and the documents in play (text only where the requester may read it) |
+| GET | /api/scenarios/{id}/investigation | The defender's case file: incident summary, clues (key and red herrings), and root causes |
 | POST | /api/sessions | Start a round: `{ "role": "red" \| "blue", "scenarioId", "defenseIds": [] }` |
 | GET | /api/sessions/{id} | Session state and the next attack request |
 | POST | /api/sessions/{id}/turns | Run the next attack turn: response, document statuses, and checkpoints |

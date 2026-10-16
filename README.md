@@ -41,20 +41,20 @@ The initial focus is confidentiality, instruction manipulation, and tool use. Th
 
 Here, “phase” refers to each role's experience. Users can start with either role and then replay the situation from the other perspective. These are not two mandatory stages of a single game.
 
-### RED COLA phase: defend
+### RED COLA phase: investigate and defend
 
-**Role:** the person responsible for the enterprise assistant.
+**Role:** the person responsible for the enterprise assistant, called in after a leak.
 
-**Goal:** protect the recipe while keeping the assistant useful for authorized requests. Blocking everything does not count as winning.
+**Goal:** find out how the recipe leaked, fix it, and prove the fix works while keeping the assistant useful for authorized requests. Blocking everything does not count as winning.
 
-1. Review the scenario, the requester's identity, and the available document types.
-2. Select defenses from a catalog of easy-to-understand cards.
-3. An automated opponent performs a predefined BLUE COLA attempt.
-4. Observe the documents consulted, the response, and the defenses that took effect.
-5. Evaluate confidentiality, utility, and operational cost.
-6. Replay with another combination of defenses to compare before and after.
+1. Open a case: the recipe has already leaked through the undefended assistant (the "before").
+2. Investigate the evidence: the conversation, the documents in play, and what each checkpoint did. Flag what looks suspicious; some clues are red herrings.
+3. Name the root cause once the key clues are found. Wrong answers get a hint, not a penalty.
+4. Choose the fix from a catalog of easy-to-understand defense cards.
+5. The automated opponent replays the same BLUE COLA attempt against the fix.
+6. Compare before and after: confidentiality, utility, and operational cost. A fix rating rewards removing the root cause with the fewest cards.
 
-Each card explains what it protects, where it acts, and its limitations.
+Each card explains what it protects, where it acts, and its limitations. The flow change is recorded in [docs/decisions/0002-investigation-flow.md](docs/decisions/0002-investigation-flow.md).
 
 ### BLUE COLA phase: attack
 

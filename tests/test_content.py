@@ -62,6 +62,29 @@ class ContentTest(unittest.TestCase):
                 controls = active_controls(self.content.defenses[d] for d in selected)
                 select_configuration(scenario, controls)  # raises if undefined
 
+    def test_investigation_clues_point_at_real_evidence_in_the_incident(self):
+        """Key checkpoint clues must point at a checkpoint that actually failed in the incident."""
+        engine = DemoEngine(self.content)
+        for scenario in self.content.scenarios.values():
+            session = engine.create_session("red", scenario.id, [])  # the incident has no defenses
+            stages = set()
+            for _ in range(scenario.max_turns):
+                result = engine.run_attack_turn(session.id)
+                stages |= {t.stage for t in result.trace if t.decision in ("unfiltered", "not-separated", "followed")}
+            for clue in scenario.investigation.clues:
+                kind, _, value = clue.target.partition(":")
+                if kind == "checkpoint" and clue.key:
+                    with self.subTest(scenario=scenario.id, clue=clue.id):
+                        self.assertIn(value, stages)
+
+    def test_the_correct_root_cause_is_fixed_by_the_paired_defense(self):
+        engine = DemoEngine(self.content)
+        for scenario in self.content.scenarios.values():
+            paired = self.content.attacks[scenario.attack_id].defense_id
+            with self.subTest(scenario=scenario.id):
+                self.assertEqual(_play(engine, scenario.id, [paired]), Exposure.NONE)
+                self.assertEqual(sum(r.correct for r in scenario.investigation.root_causes), 1)
+
     def test_the_recipe_is_only_readable_by_its_owner(self):
         recipe = self.content.documents["fictional-recipe"]
         self.assertEqual(recipe.allowed_roles, frozenset({"recipe-owner"}))

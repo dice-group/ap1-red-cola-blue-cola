@@ -22,6 +22,7 @@ One JSON file per catalog attack. The engine loads every `*.json` file in this f
 | legitimateTask | An authorized request, its candidate documents, when it counts as completed, and the default reply |
 | defenseConfigurations | Scripted outcomes in priority order (see below) |
 | limitations | What the defenses in this scenario do not solve |
+| investigation | The defender's case file: `title` and `summary` of the incident, `clues`, and `rootCauses` |
 
 Each defense configuration has `requiresControls`, one scripted reply per turn (`response`, `disclosedFragmentIds`, `trace`, and `operationalEvents`), an `explanation`, and a `remainingRisk`. It can also override `legitimate`.
 
@@ -34,3 +35,7 @@ Controls per defense card are listed in content/defenses/catalog.json. The engin
 The fictional recipe has three fragments, defined on the document in content/knowledge-base/documents.json: `water`, `ruby-syrup`, and `azur-essence`. Exposure is `none` when no fragment has been disclosed, `fragment` when some have, and `full` when all three have been disclosed across the session, in any format. Fragments accumulate across turns and are cleared on reset.
 
 `disclosedFragmentIds` must match what the response text actually reveals; the tests check this.
+
+## Investigation
+
+The defender starts from the incident: the attack against the assistant with no defenses. Each clue has an `id`, a `title`, an `explanation`, `key` (true for clues that explain the leak, false for red herrings), and a `target` naming what the player inspects: `doc:<document id>`, `checkpoint:<stage>` (identity, retrieval, context, assistant, session, output), `request:<turn>`, or `reply:<turn>`. Root causes have `text`, `feedback`, and `correct`; exactly one is correct. The loader rejects targets that don't exist, and the tests check that key checkpoint clues point at a checkpoint that actually failed in the incident.

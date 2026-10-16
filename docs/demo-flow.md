@@ -6,7 +6,7 @@ Introduce the fictional company, the educational goal, simulated mode, and the r
 
 ## RED COLA
 
-Choose defenses → run the automated attack → observe the retrieval and the response → read the explanation → check the legitimate request → compare with another configuration.
+Open a case (the leak has already happened) → inspect the evidence and find the key clues → name the root cause → choose defenses → replay the same automated attack → compare before and after, including the legitimate request → adjust the fix if needed.
 
 ## BLUE COLA
 
@@ -20,6 +20,7 @@ Show confidentiality, utility, and operational cost separately. Explain the risk
 
 - Both experiences can be completed using catalog actions.
 - Each of the four attacks has a documented vulnerable case and protected case.
+- Each of the four cases has key clues, at least one red herring, and exactly one correct root cause; the paired defense fixes it.
 - All simulated responses are labeled.
 - Each defense is also evaluated against authorized requests.
 - Resetting clears turns and accumulated fragments.

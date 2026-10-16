@@ -6,12 +6,14 @@ from enum import Enum
 __all__ = [
     "ACCESS_IDENTITIES",
     "AttackCard",
+    "Clue",
     "Control",
     "DefenseCard",
     "DefenseConfiguration",
     "Exposure",
     "Fragment",
     "GameRole",
+    "Investigation",
     "KnowledgeDocument",
     "LegitimateReply",
     "LegitimateResult",
@@ -19,6 +21,7 @@ __all__ = [
     "Mode",
     "OperationalEvent",
     "Request",
+    "RootCause",
     "RoundResult",
     "Scenario",
     "ScriptedTurn",
@@ -156,6 +159,37 @@ class DefenseConfiguration:
 
 
 @dataclass(frozen=True)
+class Clue:
+    """Evidence the defender can find while investigating the incident.
+
+    `target` names what to inspect: "doc:<id>", "checkpoint:<stage>",
+    "request:<turn>" or "reply:<turn>". Clues that are not `key` are red herrings.
+    """
+
+    id: str
+    target: str
+    title: str
+    explanation: str
+    key: bool
+
+
+@dataclass(frozen=True)
+class RootCause:
+    id: str
+    text: str
+    correct: bool
+    feedback: str
+
+
+@dataclass(frozen=True)
+class Investigation:
+    title: str
+    summary: str
+    clues: tuple[Clue, ...]
+    root_causes: tuple[RootCause, ...]
+
+
+@dataclass(frozen=True)
 class Scenario:
     id: str
     title: str
@@ -168,6 +202,7 @@ class Scenario:
     legitimate_task: LegitimateTask
     configurations: tuple[DefenseConfiguration, ...]  # in priority order
     limitations: tuple[str, ...]
+    investigation: Investigation
 
 
 # --- Session and results -----------------------------------------------------

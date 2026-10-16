@@ -10,15 +10,18 @@ from typing import Any
 from packages.domain import (
     ACCESS_IDENTITIES,
     AttackCard,
+    Clue,
     Control,
     DefenseCard,
     DefenseConfiguration,
     Fragment,
+    Investigation,
     KnowledgeDocument,
     LegitimateReply,
     LegitimateTask,
     OperationalEvent,
     Request,
+    RootCause,
     Scenario,
     ScriptedTurn,
     TraceEvent,
@@ -26,6 +29,7 @@ from packages.domain import (
 
 DEFAULT_CONTENT_ROOT = Path(__file__).resolve().parents[2] / "content"
 OPERATIONAL_EVENT_TYPES = {"verification", "block", "human-review"}
+CHECKPOINT_STAGES = {"identity", "retrieval", "context", "assistant", "session", "output"}
 
 
 class ContentError(ValueError):
@@ -124,6 +128,16 @@ def _scenario(raw: dict) -> Scenario:
         ),
         configurations=tuple(map(_configuration, raw["defenseConfigurations"])),
         limitations=tuple(raw["limitations"]),
+        investigation=_investigation(raw["investigation"]),
+    )
+
+
+def _investigation(raw: dict) -> Investigation:
+    return Investigation(
+        raw["title"],
+        raw["summary"],
+        tuple(Clue(c["id"], c["target"], c["title"], c["explanation"], c["key"]) for c in raw["clues"]),
+        tuple(RootCause(r["id"], r["text"], r["correct"], r["feedback"]) for r in raw["rootCauses"]),
     )
 
 
@@ -171,5 +185,27 @@ def _validate(content: Content) -> None:
                     if event.type not in OPERATIONAL_EVENT_TYPES:
                         problems.append(f"{where}/{configuration.id}: unknown event type {event.type}")
 
+        problems.extend(_investigation_problems(scenario, where))
+
     if problems:
         raise ContentError("Invalid content:\n- " + "\n- ".join(problems))
+
+
+def _investigation_problems(scenario: Scenario, where: str) -> list[str]:
+    investigation = scenario.investigation
+    documents = {d for r in (*scenario.attack_turns, scenario.legitimate_task.request) for d in r.candidate_document_ids}
+    problems = []
+    if not any(c.key for c in investigation.clues):
+        problems.append(f"{where}: the investigation needs at least one key clue")
+    if [r.correct for r in investigation.root_causes].count(True) != 1:
+        problems.append(f"{where}: the investigation needs exactly one correct root cause")
+    for clue in investigation.clues:
+        kind, _, value = clue.target.partition(":")
+        valid = (
+            (kind == "doc" and value in documents)
+            or (kind == "checkpoint" and value in CHECKPOINT_STAGES)
+            or (kind in ("request", "reply") and value.isdigit() and 1 <= int(value) <= scenario.max_turns)
+        )
+        if not valid:
+            problems.append(f"{where}: clue {clue.id} has an invalid target {clue.target!r}")
+    return problems

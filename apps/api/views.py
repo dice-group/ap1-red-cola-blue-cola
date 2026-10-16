@@ -49,8 +49,25 @@ def catalog(content: Content) -> dict:
                 "turns": s.max_turns,
                 "fragmentCount": len(content.fragments_of(s)),
                 "documents": _shelf(content, s),
+                "incident": {"title": s.investigation.title, "summary": s.investigation.summary},
             }
             for s in sorted(content.scenarios.values(), key=lambda s: list(content.attacks).index(s.attack_id))
+        ],
+    }
+
+
+def investigation(content: Content, scenario_id: str) -> dict:
+    """The defender's case file: what happened, the evidence, and possible root causes."""
+    case = content.scenarios[scenario_id].investigation
+    return {
+        "title": case.title,
+        "summary": case.summary,
+        "clues": [
+            {"id": c.id, "target": c.target, "title": c.title, "explanation": c.explanation, "key": c.key}
+            for c in case.clues
+        ],
+        "rootCauses": [
+            {"id": r.id, "text": r.text, "correct": r.correct, "feedback": r.feedback} for r in case.root_causes
         ],
     }
 

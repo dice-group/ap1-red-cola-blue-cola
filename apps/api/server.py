@@ -26,6 +26,7 @@ STATIC_FILES = {
     "/fonts/lobster-latin.woff2": ("fonts/lobster-latin.woff2", "font/woff2"),
 }
 MAX_BODY_BYTES = 16 * 1024
+INVESTIGATION_ROUTE = re.compile(r"^/api/scenarios/(?P<id>[\w-]+)/investigation$")
 SESSION_ROUTE = re.compile(r"^/api/sessions/(?P<id>[\w-]+)(?:/(?P<action>turns|legitimate|reset|result))?$")
 
 
@@ -72,6 +73,12 @@ def make_handler(engine: DemoEngine, *, quiet: bool = False) -> type[BaseHTTPReq
         def _dispatch(self, method: str, path: str) -> tuple[HTTPStatus, dict]:
             if path == "/api/catalog" and method == "GET":
                 return HTTPStatus.OK, views.catalog(content)
+
+            case = INVESTIGATION_ROUTE.match(path)
+            if case and method == "GET":
+                if case["id"] not in content.scenarios:
+                    raise ApiError(HTTPStatus.NOT_FOUND, "Unknown scenario.")
+                return HTTPStatus.OK, views.investigation(content, case["id"])
 
             if path == "/api/sessions" and method == "POST":
                 body = self._body()
