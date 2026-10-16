@@ -21,4 +21,6 @@ Each screen has its own URL hash (for example `#/red/loadout`), so the browser's
 
 The interface consumes the service's JSON only. It does not evaluate permissions and never contains the confidential recipe; a test checks this. Every assistant response is labeled with its mode, outcomes use text and symbols as well as color, and animations are turned off when the system asks for reduced motion.
 
+**Icons and themes.** Icons are a small hand-drawn SVG set in [icons.js](icons.js): one stroke style with a soft tinted fill, no emoji and no icon library, so the demo has its own look and works offline. Big card icons sit inside a serrated bottle cap. A header button switches between dark and light themes; without a saved choice the page follows the system setting, and [theme.js](theme.js) applies the saved choice before the page paints.
+
 The script font is [Lobster](https://github.com/impallari/The-Lobster-Font), bundled in `fonts/` under the SIL Open Font License (see `fonts/OFL.txt`) so the demo works offline.

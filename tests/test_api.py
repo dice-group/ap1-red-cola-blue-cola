@@ -46,7 +46,7 @@ class ApiTest(unittest.TestCase):
             self.assertNotIn(marker, text)
 
     def test_web_bundle_contains_no_secrets(self):
-        for path in ("/", "/app.js", "/styles.css", "/fonts/lobster-latin.woff2"):
+        for path in ("/", "/app.js", "/icons.js", "/theme.js", "/styles.css", "/fonts/lobster-latin.woff2"):
             status, text = self.request("GET", path)
             self.assertEqual(status, 200, path)
             if path.endswith(".woff2"):

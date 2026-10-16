@@ -35,4 +35,5 @@ Run `python3 -m apps.api`, open http://127.0.0.1:8000, and check:
 - [ ] Opening a later screen directly (for example `#/red/debrief` in a fresh tab) lands on the furthest screen available.
 - [ ] The whole flow works with the keyboard only (Tab, Space, Enter), and focus is visible.
 - [ ] Outcomes can be read without color (✓, ⚠, ✕ and text).
-- [ ] The layout works at phone width and in dark mode.
+- [ ] The layout works at phone width, in dark mode and in light mode. The theme button switches themes and the choice survives a reload; with no choice saved, the page follows the system setting.
+- [ ] No emoji anywhere in the interface: every icon comes from the shared SVG set.

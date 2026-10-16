@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="dark light">
+  <script src="/theme.js"></script>
   <title>Red Cola vs Blue Cola</title>
   <meta name="description" content="An educational game about AI safety risks and mitigation strategies.">
   <link rel="preload" href="/fonts/lobster-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -20,10 +21,11 @@
         <span class="punch" aria-hidden="true">Blue Cola</span>
       </button>
       <nav aria-label="Roles" class="nav">
-        <button type="button" data-nav="red">🛡️ Defend</button>
-        <button type="button" data-nav="blue">🕵️ Attack</button>
+        <button type="button" data-nav="red" data-icon="shield">Defend</button>
+        <button type="button" data-nav="blue" data-icon="spy">Attack</button>
       </nav>
       <span class="mode-badge" title="Responses are scripted. No real AI model is used.">Simulated</span>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">Light mode</button>
     </div>
   </header>
   <main id="main" class="wrap" tabindex="-1">

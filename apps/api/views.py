@@ -16,12 +16,12 @@ from packages.security import active_controls
 # The checkpoints a request passes through, in order. Each maps to an engine
 # trace stage and, if it is optional, to the control that switches it on.
 CHECKPOINTS = (
-    ("identity", "Identity", "🪪", None),
-    ("retrieval", "Permission gate", "🚧", Control.RETRIEVAL_PERMISSIONS),
-    ("context", "Instruction wall", "🧱", Control.INSTRUCTION_SEPARATION),
-    ("assistant", "Assistant", "🤖", None),
-    ("session", "History watch", "🕰️", Control.HISTORY_REVIEW),
-    ("output", "Output check", "🔍", Control.OUTPUT_REVIEW),
+    ("identity", "Identity", None),
+    ("retrieval", "Permission gate", Control.RETRIEVAL_PERMISSIONS),
+    ("context", "Instruction wall", Control.INSTRUCTION_SEPARATION),
+    ("assistant", "Assistant", None),
+    ("session", "History watch", Control.HISTORY_REVIEW),
+    ("output", "Output check", Control.OUTPUT_REVIEW),
 )
 GOOD_DECISIONS = {"filtered", "separated", "not-followed", "not-trusted", "refused", "blocked", "flagged", "noted"}
 BAD_DECISIONS = {"unfiltered", "followed", "not-separated", "passed"}
@@ -201,13 +201,12 @@ def _checkpoints(content: Content, s: Session, result: TurnResult) -> list[dict]
     controls = active_controls(content.defenses[d] for d in s.selected_defense_ids)
     events = {t.stage: t for t in result.trace}
     checkpoints = []
-    for stage, label, icon, control in CHECKPOINTS:
+    for stage, label, control in CHECKPOINTS:
         event = events.get(stage)
         decision = event.decision if event and event.decision not in SILENT_DECISIONS else None
         checkpoints.append({
             "id": stage,
             "label": label,
-            "icon": icon,
             "equipped": control is None or control in controls,
             "decision": decision,
             "tone": "good" if decision in GOOD_DECISIONS else "bad" if decision in BAD_DECISIONS else "neutral",

@@ -22,6 +22,8 @@ WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
 STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+    "/icons.js": ("icons.js", "text/javascript; charset=utf-8"),
+    "/theme.js": ("theme.js", "text/javascript; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/fonts/lobster-latin.woff2": ("fonts/lobster-latin.woff2", "font/woff2"),
 }
