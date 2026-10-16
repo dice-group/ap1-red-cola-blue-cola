@@ -187,29 +187,31 @@ main:focus { outline: none; }
 .site-footer { color: var(--on-bg); font: 0.8rem var(--mono); padding-top: 22px; padding-bottom: 30px; opacity: 0.8; }
 
 /* ---------- Home: the poster ---------- */
+/* The blueprint fills the whole poster; the red halftone is one slanted layer on top whose
+   diagonal passes through the exact centre, so both halves are equal and nothing shows through. */
 .versus {
   position: relative; display: grid; grid-template-columns: 1fr 1fr; min-height: 380px; overflow: hidden;
   border: 3px solid var(--ink); border-radius: var(--r); box-shadow: var(--shadow-lg);
-}
-.side {
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-  padding: 48px 32px; border: 0; color: var(--on-color); cursor: pointer; text-align: center; font: inherit;
-}
-.side.red {
-  background-color: var(--red);
-  background-image: radial-gradient(rgb(0 0 0 / 0.16) 1.4px, transparent 1.6px); /* halftone */
-  background-size: 10px 10px;
-  clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
-  margin-right: -12%; padding-right: 15%; z-index: 1;
-}
-.side.blue {
   background-color: var(--blueprint);
   background-image:
     linear-gradient(var(--grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
     linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
-  padding-left: 15%;
 }
+.versus::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-color: var(--red);
+  background-image: radial-gradient(rgb(0 0 0 / 0.16) 1.4px, transparent 1.6px); /* halftone */
+  background-size: 10px 10px;
+  clip-path: polygon(0 0, 56% 0, 44% 100%, 0 100%);
+}
+.side {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: 48px 32px; border: 0; color: var(--on-color); cursor: pointer; text-align: center; font: inherit;
+}
+.side { background: transparent; z-index: 1; }
+.side.red { padding-right: 14%; }  /* keep the text clear of the diagonal */
+.side.blue { padding-left: 14%; }
 .side .wordmark { line-height: 0.95; }
 .side.red .wordmark { font-size: clamp(3rem, 8vw, 6.2rem); text-shadow: 5px 5px 0 var(--red-deep); }
 .side.blue .wordmark { font-size: clamp(2.8rem, 7vw, 5.6rem); letter-spacing: 0.03em; text-shadow: 5px 5px 0 rgb(0 0 0 / 0.35); }
@@ -694,7 +696,9 @@ fieldset:disabled .option { cursor: not-allowed; opacity: 0.55; }
 }
 @media (max-width: 760px) {
   .versus { grid-template-columns: 1fr; }
-  .side.red, .side.blue { clip-path: none; margin: 0; padding: 40px 20px; min-height: 230px; }
+  .versus::before { display: none; }
+  .side.red, .side.blue { padding: 40px 20px; min-height: 230px; }
+  .side.red { background-color: var(--red); background-image: radial-gradient(rgb(0 0 0 / 0.16) 1.4px, transparent 1.6px); background-size: 10px 10px; }
   .side.red { padding-bottom: 60px; }
   .side.blue { padding-top: 60px; }
   .vs-badge { position: relative; left: auto; top: auto; transform: none; margin: -34px auto; width: 68px; height: 68px; font-size: 1.8rem; }
