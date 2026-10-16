@@ -21,4 +21,4 @@ For the engine or security controls: verify permissions before retrieval, partia
 
 For the interface: check both roles, keyboard navigation, labels, and that outcomes do not rely exclusively on color.
 
-The project does not yet define a test runner. Each pull request must state what was verified and what remains pending.
+Run `python3 -m unittest discover -s tests -t .` before opening a pull request, and use the manual checklist in tests/README.md for interface changes. Each pull request must state what was verified and what remains pending.

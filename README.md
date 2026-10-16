@@ -9,7 +9,23 @@ An educational demo of AI safety risks and mitigation strategies for industry st
 
 ## Project status
 
-This repository contains the documentation and initial structure for developing the demo. It does not yet include a runnable application, model integrations, or implemented security controls. Code directories describe planned responsibilities; no framework has been selected.
+The simulated MVP is runnable: both roles, all four scenarios, before/after comparison, and the three outcome indicators. Responses are scripted and always labeled "simulated". Retrieval permissions and disclosure detection run for real in the security layer. No real model is connected yet.
+
+## Quick start
+
+Requires Python 3.10 or newer. There are no dependencies to install.
+
+```bash
+python3 -m apps.api
+```
+
+Open http://127.0.0.1:8000. Use `--port` to change the port.
+
+Run the tests:
+
+```bash
+python3 -m unittest discover -s tests -t .
+```
 
 ## The scenario
 
@@ -25,20 +41,20 @@ The initial focus is confidentiality, instruction manipulation, and tool use. Th
 
 Here, “phase” refers to each role's experience. Users can start with either role and then replay the situation from the other perspective. These are not two mandatory stages of a single game.
 
-### RED COLA phase: defend
+### RED COLA phase: investigate and defend
 
-**Role:** the person responsible for the enterprise assistant.
+**Role:** the person responsible for the enterprise assistant, called in after a leak.
 
-**Goal:** protect the recipe while keeping the assistant useful for authorized requests. Blocking everything does not count as winning.
+**Goal:** find out how the recipe leaked, fix it, and prove the fix works while keeping the assistant useful for authorized requests. Blocking everything does not count as winning.
 
-1. Review the scenario, the requester's identity, and the available document types.
-2. Select defenses from a catalog of easy-to-understand cards.
-3. An automated opponent performs a predefined BLUE COLA attempt.
-4. Observe the documents consulted, the response, and the defenses that took effect.
-5. Evaluate confidentiality, utility, and operational cost.
-6. Replay with another combination of defenses to compare before and after.
+1. Open a case: the recipe has already leaked through the undefended assistant (the "before").
+2. Investigate the evidence: the conversation, the documents in play, and what each checkpoint did. Flag what looks suspicious; some clues are red herrings.
+3. Name the root cause once the key clues are found. Wrong answers get a hint, not a penalty.
+4. Choose the fix from a catalog of easy-to-understand defense cards.
+5. The automated opponent replays the same BLUE COLA attempt against the fix.
+6. Compare before and after: confidentiality, utility, and operational cost. A fix rating rewards removing the root cause with the fewest cards.
 
-Each card explains what it protects, where it acts, and its limitations.
+Each card explains what it protects, where it acts, and its limitations. The flow change is recorded in [docs/decisions/0002-investigation-flow.md](docs/decisions/0002-investigation-flow.md).
 
 ### BLUE COLA phase: attack
 
@@ -46,14 +62,14 @@ Each card explains what it protects, where it acts, and its limitations.
 
 **Goal:** obtain the recipe or partial information using the catalog options.
 
-1. Review the context and the available attack options.
+1. Pick a mission. Each one is RED COLA's assistant with defenses the player cannot see: *The open door* (none), *The watchful reviewer* (output review), *The locked vault* (permissions).
 2. Choose an attack card; the MVP does not require free-form input.
-3. RED COLA's assistant responds using the scenario's defense configuration.
-4. Observe the response and progress toward obtaining the recipe.
-5. Read why the attempt succeeded or failed and which mitigation could have helped.
-6. Replay from the same initial state to compare strategies.
+3. RED COLA's assistant responds using the mission's hidden defense configuration.
+4. Observe the response, progress toward the recipe, and the checkpoint where the attempt was stopped.
+5. Adapt: up to three attempts per mission, choosing another attack card each time.
+6. The debrief reveals the hidden defense and explains why the attempts succeeded or failed and which mitigation made the difference.
 
-The demo engine evaluates outcomes. The BLUE COLA client does not receive confidential documents or hidden expected responses before the attempt.
+The demo engine evaluates outcomes. The BLUE COLA client does not receive confidential documents, hidden expected responses, or the mission's defenses before the attempt.
 
 ## Initial MVP catalog
 
@@ -103,18 +119,20 @@ The results screen should explain what happened, which information was authorize
 
 The planned MVP uses predefined responses and outcomes. A later technical development stage may connect a real model through an adapter. In that case, the interface must display “real model,” record its configuration, and explain that results may vary. A simulated script does not demonstrate a real model's behavior.
 
-## Planned architecture
+## Architecture
 
 | Module | Responsibility |
 | --- | --- |
-| apps/web | Role selection, cards, interaction, results, and explanations |
-| apps/api | Sessions, scenario identity, and engine execution |
+| apps/web | Role selection, cards, interaction, results, and explanations (static HTML, CSS, and JavaScript) |
+| apps/api | Sessions, scenario identity, engine execution, and role-filtered JSON views |
 | packages/domain | Shared contracts: roles, actions, documents, traces, and results |
-| packages/engine | Turns, rules, resets, evaluation, and simulation |
-| packages/ai | Adapters for simulation and, later, real models |
-| packages/security | Retrieval permissions, instruction boundaries, and output review |
-| content | Educational catalogs and fictional documents |
-| tests | Future verification of scenarios, permissions, and flows |
+| packages/engine | Content loading and validation, turns, resets, evaluation, and simulation |
+| packages/ai | Assistant adapters: simulated now, real models later |
+| packages/security | Retrieval permissions and disclosure detection |
+| content | Educational catalogs, fictional documents, and scenario scripts |
+| tests | Content consistency, security, engine, and HTTP tests |
+
+The stack is recorded in [docs/decisions/0001-simulated-mvp-stack.md](docs/decisions/0001-simulated-mvp-stack.md).
 
 Planned flow: **identity and permissions → authorized retrieval → assistant → response review → educational outcome**.
 
@@ -124,32 +142,30 @@ The fictional recipe may be visible in the repository's public code. The goal is
 
 ## Repository structure
 
-| Path | Initial contents |
+| Path | Contents |
 | --- | --- |
 | README.md | Context, both phases, scope, and architecture |
 | CONTRIBUTING.md | Development and review guidance |
 | docs/architecture.md | Module boundaries and design rules |
 | docs/demo-flow.md | Walkthrough and acceptance criteria |
-| apps/web/README.md | Interface responsibilities |
-| apps/api/README.md | Service responsibilities |
-| packages/*/README.md | Responsibilities and future interfaces |
+| docs/decisions/ | Technical decision records |
+| apps/web/ | Web interface |
+| apps/api/ | HTTP service (`python3 -m apps.api`) |
+| packages/*/ | Domain, engine, AI adapters, and security controls |
 | content/attacks/catalog.json | Four attack cards |
 | content/defenses/catalog.json | Four defense cards |
 | content/knowledge-base/documents.json | Demo documents and recipe |
-| content/scenarios/README.md | Planned scenario contract |
-| tests/README.md | Verification plan |
+| content/scenarios/ | One scenario script per attack, plus the scenario contract |
+| content/missions/catalog.json | Three attacker missions with hidden defenses |
+| tests/ | Automated tests and the manual demo checklist |
 | .gitignore | Common exclusions and local secrets |
 
-## Getting started with development
+## Next steps
 
-1. Read this README and docs/demo-flow.md.
-2. Review docs/architecture.md and agree on the stack in a documented decision.
-3. Implement the simulated engine and one complete scenario first.
-4. Add both interfaces using the same contracts.
-5. Complete the catalog and verify resets, permissions, utility, and explanations.
-6. Connect a real model only after establishing a reproducible baseline.
-
-There are no installation or run commands yet: dependencies and startup scripts have not been added.
+1. Rehearse the demo using the checklist in tests/README.md.
+2. Choose a license.
+3. Connect a real model through a new adapter in packages/ai, only after recording the decision. The interface must then display "real model" and its configuration.
+4. Optionally add tools and external destinations to illustrate information transfers.
 
 ## Communication and contribution principles
 

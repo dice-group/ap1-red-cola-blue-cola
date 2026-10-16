@@ -1,3 +1,3 @@
-# Dominio
+# Domain
 
-Pendiente de implementación. Definir roles de juego, identidades de acceso, acciones, documentos, escenarios, resultados y eventos de traza. Sin dependencias de interfaz o proveedores. Contratos previstos en docs/architecture.md.
+Shared contracts as frozen dataclasses in [models.py](models.py): gameplay roles, access identities, controls, cards, documents and fragments, scenarios and their defense configurations, sessions, trace events, and results. No I/O and no dependencies on interfaces or providers.

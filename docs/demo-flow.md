@@ -1,30 +1,32 @@
-# Recorrido del demo
+# Demo walkthrough
 
-## Inicio
+## Start
 
-Presentar la empresa ficticia, el objetivo educativo, el modo simulado y la elección de rol. Explicar que RED COLA defiende y BLUE COLA ataca. No depender únicamente de rojo y azul.
+Introduce the fictional company, the educational goal, simulated mode, and the role choice. Explain that RED COLA defends and BLUE COLA attacks. Do not rely on red and blue alone.
 
 ## RED COLA
 
-Elegir defensas → ejecutar ataque automático → observar consulta y respuesta → leer explicación → comprobar solicitud legítima → comparar con otra configuración.
+Open a case (the leak has already happened) → inspect the evidence and find the key clues → name the root cause → choose defenses → replay the same automated attack → compare before and after, including the legitimate request → adjust the fix if needed.
 
 ## BLUE COLA
 
-Elegir ataque → ejecutar contra defensas del escenario → observar respuesta y exposición → leer explicación → reiniciar o cambiar de rol.
+Pick a mission (defenses hidden) → choose an attack → observe the response, the loot, and where it was stopped → try another attack, up to three attempts → the debrief reveals the hidden defense and explains the outcome → next mission, retry, or investigate the same case as RED COLA.
 
-## Fin de ronda
+## End of round
 
-Mostrar confidencialidad, utilidad y coste operativo por separado. Explicar el riesgo, la capa de defensa y su limitación. La comparación debe mantener escenario e identidad iguales.
+Show confidentiality, utility, and operational cost separately. Explain the risk, the defense layer, and its limitation. Comparisons must keep the scenario and identity the same.
 
-## Criterios de aceptación del MVP
+## MVP acceptance criteria
 
-- Ambas experiencias se completan con acciones de catálogo.
-- Cada uno de los cuatro ataques tiene un caso vulnerable y un caso protegido documentados.
-- Todas las respuestas simuladas están etiquetadas.
-- Una defensa se evalúa también con solicitudes autorizadas.
-- Reiniciar elimina turnos y fragmentos acumulados.
-- La traza de BLUE COLA no anticipa la receta ni la respuesta esperada.
-- La explicación es comprensible sin leer código.
-- Se puede navegar con teclado y distinguir estados sin depender del color.
+- Both experiences can be completed using catalog actions.
+- Each of the four attacks has a documented vulnerable case and protected case.
+- Each of the four cases has key clues, at least one red herring, and exactly one correct root cause; the paired defense fixes it.
+- All simulated responses are labeled.
+- Each defense is also evaluated against authorized requests.
+- Resetting clears turns and accumulated fragments.
+- The BLUE COLA trace does not reveal the recipe or the expected response in advance, and a mission's defenses stay hidden until an attempt is over.
+- The three missions form a progression: every attack works against the open door, only gradual disclosure beats the output reviewer, and nothing beats permissions.
+- The explanation is understandable without reading code.
+- The interface is keyboard navigable and states can be distinguished without relying on color.
 
-Duración sugerida para una presentación: 5–10 minutos, con un escenario y su comparación.
+Suggested presentation length: 5–10 minutes, with one scenario and its comparison.
