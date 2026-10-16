@@ -10,16 +10,20 @@
   {
     "id": "watchful-reviewer",
     "title": "The watchful reviewer",
-    "briefing": "Word is that Red Cola now checks what its assistant says before anything goes out.",
-    "defenseIds": ["content-review"],
+    "briefing": "Word is that Red Cola now runs an automatic filter that scans each answer before it goes out.",
+    "defenseIds": [
+      "content-review"
+    ],
     "attempts": 3,
-    "lesson": "An output check looks at one answer at a time. Small pieces slip through because none of them looks like the recipe on its own. Reviewing output helps, but it is the last line of defense: the recipe still reached the assistant."
+    "lesson": "The filter never read your questions, and it judged each answer on its own. Small pieces slip through because none of them looks like the recipe by itself. Spotting the pattern needs a layer that reviews the whole conversation, and the recipe still reached the assistant."
   },
   {
     "id": "locked-vault",
     "title": "The locked vault",
     "briefing": "Red Cola has had a security review. Something changed, but nobody will say what.",
-    "defenseIds": ["verified-access"],
+    "defenseIds": [
+      "verified-access"
+    ],
     "attempts": 3,
     "lesson": "Permissions are checked before the assistant sees anything. No persona, wording, or planted instruction can leak what the assistant never receives. That is why access control belongs outside the model."
   }

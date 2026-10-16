@@ -143,7 +143,7 @@
         "target": "checkpoint:retrieval",
         "key": true,
         "title": "The open gate",
-        "explanation": "No permission check ran. The confidential recipe was handed to the assistant, although a employee may not read it."
+        "explanation": "No permission check ran. The confidential recipe was handed to the assistant, although an employee may not read it."
       },
       {
         "id": "procedure",
