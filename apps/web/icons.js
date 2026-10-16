@@ -86,10 +86,10 @@ export function icon(name, { label, className = "" } = {}) {
   return svg;
 }
 
-// A big icon set inside a serrated bottle cap: the demo's signature emblem.
-export function capIcon(name, { tone = "" } = {}) {
-  const cap = document.createElement("span");
-  cap.className = `cap-emblem ${tone}`.trim();
-  cap.append(icon(name));
-  return cap;
+// A big icon on a square, ink-outlined sticker: the demo's signature emblem.
+export function sticker(name) {
+  const tile = document.createElement("span");
+  tile.className = "sticker";
+  tile.append(icon(name));
+  return tile;
 }

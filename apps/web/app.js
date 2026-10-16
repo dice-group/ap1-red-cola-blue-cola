@@ -2,7 +2,7 @@
 // Renders only what the service returns; it never evaluates permissions and
 // never holds the confidential knowledge base.
 
-import { capIcon, icon } from "./icons.js";
+import { icon, sticker } from "./icons.js";
 
 const main = document.getElementById("main");
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -174,6 +174,7 @@ document.querySelectorAll("[data-nav]").forEach((button) =>
 );
 
 function render() {
+  document.body.dataset.side = state.side; // each side has its own world: case file or blueprint
   document.querySelectorAll("[data-nav]").forEach((button) => {
     if (button.dataset.nav === state.side) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
@@ -306,7 +307,7 @@ function flipCard({ key, input, front, back, flag }) {
 // Card fronts stay minimal: a big icon, the title, and one quiet line.
 function cardFace({ icon, label, title, text, meta }) {
   return [
-    icon ? capIcon(icon) : null,
+    icon ? sticker(icon) : null,
     label ? h("span", { class: "card-label" }, label) : null,
     title ? h("h3", {}, title) : null,
     text ? h("p", {}, text) : null,

@@ -26,6 +26,9 @@ STATIC_FILES = {
     "/theme.js": ("theme.js", "text/javascript; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/fonts/lobster-latin.woff2": ("fonts/lobster-latin.woff2", "font/woff2"),
+    "/fonts/anton-latin.woff2": ("fonts/anton-latin.woff2", "font/woff2"),
+    "/fonts/space-mono-400-latin.woff2": ("fonts/space-mono-400-latin.woff2", "font/woff2"),
+    "/fonts/space-mono-700-latin.woff2": ("fonts/space-mono-700-latin.woff2", "font/woff2"),
 }
 MAX_BODY_BYTES = 16 * 1024
 INVESTIGATION_ROUTE = re.compile(r"^/api/scenarios/(?P<id>[\w-]+)/investigation$")

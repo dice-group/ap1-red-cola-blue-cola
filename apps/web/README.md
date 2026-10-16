@@ -1,6 +1,11 @@
 # Web interface
 
-Static HTML, CSS, and JavaScript served by the demo service, with no build step. The look follows the README banner: a red half with script lettering, a blue half with heavy slanted capitals, and a navy "VS" badge.
+Static HTML, CSS, and JavaScript served by the demo service, with no build step.
+
+**Look.** Two worlds that share one print language (ink outlines, hard offset shadows, square shapes, no soft gradients):
+- **Red Cola** is a vintage soda company's case file: cream paper, red halftone, manila folders, ruled notebooks, sticky-note clues and rubber-stamp verdicts.
+- **Blue Cola** is a spy's blueprint: a cobalt grid background, chalk-white type, and typewriter messages.
+The home page is a diagonal poster split between the two, with a square VS stamp.
 
 - **Home:** a split-screen versus page for picking a side, plus a short briefing.
 - **Red Cola · Incident response:** five screens, *Case → Investigate → Fix → Replay → Result*.
@@ -21,6 +26,6 @@ Each screen has its own URL hash (for example `#/red/loadout`), so the browser's
 
 The interface consumes the service's JSON only. It does not evaluate permissions and never contains the confidential recipe; a test checks this. Every assistant response is labeled with its mode, outcomes use text and symbols as well as color, and animations are turned off when the system asks for reduced motion.
 
-**Icons and themes.** Icons are a small hand-drawn SVG set in [icons.js](icons.js): one stroke style with a soft tinted fill, no emoji and no icon library, so the demo has its own look and works offline. Big card icons sit inside a serrated bottle cap. A header button switches between dark and light themes; without a saved choice the page follows the system setting, and [theme.js](theme.js) applies the saved choice before the page paints.
+**Icons and themes.** Icons are a small hand-drawn SVG set in [icons.js](icons.js): one stroke style with a soft tinted fill, no emoji and no icon library. Big card icons sit on square ink-outlined stickers. A header button switches between paper (light) and night-print (dark) themes; without a saved choice the page follows the system setting, and [theme.js](theme.js) applies the saved choice before the page paints.
 
-The script font is [Lobster](https://github.com/impallari/The-Lobster-Font), bundled in `fonts/` under the SIL Open Font License (see `fonts/OFL.txt`) so the demo works offline.
+**Fonts,** bundled in `fonts/` under the SIL Open Font License so the demo works offline: [Lobster](https://github.com/impallari/The-Lobster-Font) for the Red Cola script, [Anton](https://github.com/googlefonts/AntonFont) for poster headings, and [Space Mono](https://github.com/googlefonts/spacemono) for labels and the spy's typewriter. Licenses: `fonts/OFL-*.txt`.
