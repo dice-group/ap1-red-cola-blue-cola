@@ -39,6 +39,11 @@ def catalog(content: Content) -> dict:
             {"id": d.id, "title": d.title, "explanation": d.explanation, "layer": d.layer, "limitation": d.limitation}
             for d in content.defenses.values()
         ],
+        "missions": [
+            # The defenses stay on the server: finding them out is the point of a mission.
+            {"id": m.id, "title": m.title, "briefing": m.briefing, "attempts": m.attempts}
+            for m in content.missions.values()
+        ],
         "scenarios": [
             {
                 "id": s.id,
@@ -80,7 +85,9 @@ def session(content: Content, s: Session) -> dict:
         "scenarioId": s.scenario_id,
         "identity": s.identity,
         "mode": s.mode.value,
-        "selectedDefenseIds": list(s.selected_defense_ids),
+        "missionId": s.mission_id,
+        # Hidden in missions: the attacker learns the defenses by being stopped by them.
+        "selectedDefenseIds": None if s.mission_id else list(s.selected_defense_ids),
         "turn": s.turn,
         "maxTurns": scenario.max_turns,
         "nextRequest": scenario.attack_turns[s.turn].text if s.turn < scenario.max_turns else None,
@@ -139,6 +146,19 @@ def round_result(content: Content, result: RoundResult) -> dict:
         "remainingRisk": result.remaining_risk,
         "limitations": list(result.limitations),
         "rating": _rating(content, result),
+    }
+
+
+def mission_debrief(content: Content, mission_id: str) -> dict:
+    mission = content.missions[mission_id]
+    return {
+        "id": mission.id,
+        "title": mission.title,
+        "lesson": mission.lesson,
+        "defenses": [
+            {"id": d, "title": content.defenses[d].title, "layer": content.defenses[d].layer}
+            for d in mission.defense_ids
+        ],
     }
 
 

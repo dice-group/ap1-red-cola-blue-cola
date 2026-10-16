@@ -1,0 +1,26 @@
+[
+  {
+    "id": "open-door",
+    "title": "The open door",
+    "briefing": "Red Cola's assistant is fresh out of the box. Nobody seems to have secured it yet.",
+    "defenseIds": [],
+    "attempts": 3,
+    "lesson": "With no defenses, every trick works, because each one exploits a different gap: trust in claims, obedience to documents, answers checked one at a time, and blindness to format."
+  },
+  {
+    "id": "watchful-reviewer",
+    "title": "The watchful reviewer",
+    "briefing": "Word is that Red Cola now checks what its assistant says before anything goes out.",
+    "defenseIds": ["content-review"],
+    "attempts": 3,
+    "lesson": "An output check looks at one answer at a time. Small pieces slip through because none of them looks like the recipe on its own. Reviewing output helps, but it is the last line of defense: the recipe still reached the assistant."
+  },
+  {
+    "id": "locked-vault",
+    "title": "The locked vault",
+    "briefing": "Red Cola has had a security review. Something changed, but nobody will say what.",
+    "defenseIds": ["verified-access"],
+    "attempts": 3,
+    "lesson": "Permissions are checked before the assistant sees anything. No persona, wording, or planted instruction can leak what the assistant never receives. That is why access control belongs outside the model."
+  }
+]

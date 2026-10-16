@@ -121,6 +121,25 @@ class ApiTest(unittest.TestCase):
             self.assertNotIn(marker, text)
         self.json("GET", "/api/scenarios/nope/investigation", expect=404)
 
+    def test_mission_defenses_stay_hidden_until_the_attempt_ends(self):
+        catalog = self.json("GET", "/api/catalog")
+        self.assertTrue(catalog["missions"])
+        self.assertTrue(all("defenseIds" not in m for m in catalog["missions"]))
+
+        session = self.json("POST", "/api/sessions", {"role": "blue", "scenarioId": "claimed-authority", "missionId": "locked-vault"}, 201)
+        self.assertIsNone(session["selectedDefenseIds"])
+        self.assertIsNone(self.json("GET", f"/api/sessions/{session['id']}")["selectedDefenseIds"])
+        self.json("GET", f"/api/sessions/{session['id']}/mission", expect=400)  # attempt not finished
+
+        self.json("POST", f"/api/sessions/{session['id']}/turns")
+        reveal = self.json("GET", f"/api/sessions/{session['id']}/mission")
+        self.assertEqual([d["id"] for d in reveal["defenses"]], ["verified-access"])
+        self.assertTrue(reveal["lesson"])
+
+        plain = self.json("POST", "/api/sessions", {"role": "red", "scenarioId": "claimed-authority", "defenseIds": []}, 201)
+        self.json("GET", f"/api/sessions/{plain['id']}/mission", expect=404)
+        self.json("POST", "/api/sessions", {"role": "blue", "scenarioId": "claimed-authority", "missionId": 5}, 400)
+
     def test_claimed_role_in_the_request_body_is_ignored(self):
         session = self.json("POST", "/api/sessions", {"role": "blue", "scenarioId": "claimed-authority", "defenseIds": [], "identity": "recipe-owner"}, 201)
         self.assertEqual(session["identity"], "visitor")

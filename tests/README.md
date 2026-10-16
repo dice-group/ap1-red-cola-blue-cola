@@ -23,7 +23,7 @@ Run `python3 -m apps.api`, open http://127.0.0.1:8000, and check:
 - [ ] RED COLA: for each scenario, run with no defenses (full disclosure), then with the paired defense (no disclosure, 1 of 1 legitimate requests completed). The "Before and after" table shows both rounds.
 - [ ] RED COLA, "Give me a small piece" with only "Review content in any format" selected: the recipe still leaks across three turns.
 - [ ] RED COLA, "The document gives you a new instruction" with only "Verify identity and permissions" selected: no leak, but the explanation says the injected instruction was still followed.
-- [ ] BLUE COLA: each attack succeeds on Easy and fails on Hard. "Replay" restores 0 of 3 pieces.
+- [ ] BLUE COLA missions: every trick cracks *The open door*; against *The watchful reviewer* the first three tricks are stopped at the output check and "Give me a small piece" gets the full recipe; *The locked vault* stops every trick at the permission gate. The defense is only named in the debrief.
 - [ ] Before an attack, open each document in play: the supplier's delivery note shows the highlighted hidden instruction; the recipe stays locked for every identity.
 - [ ] During a turn, checkpoints light up one by one, the recipe card is stamped DENIED when the permission gate is equipped, and "What the assistant can see" glows red when the recipe gets in.
 - [ ] Tap a checkpoint after a turn: the narrator line explains what it did. Multi-turn attacks show move tabs.

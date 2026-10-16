@@ -62,14 +62,14 @@ Each card explains what it protects, where it acts, and its limitations. The flo
 
 **Goal:** obtain the recipe or partial information using the catalog options.
 
-1. Review the context and the available attack options.
+1. Pick a mission. Each one is RED COLA's assistant with defenses the player cannot see: *The open door* (none), *The watchful reviewer* (output review), *The locked vault* (permissions).
 2. Choose an attack card; the MVP does not require free-form input.
-3. RED COLA's assistant responds using the scenario's defense configuration.
-4. Observe the response and progress toward obtaining the recipe.
-5. Read why the attempt succeeded or failed and which mitigation could have helped.
-6. Replay from the same initial state to compare strategies.
+3. RED COLA's assistant responds using the mission's hidden defense configuration.
+4. Observe the response, progress toward the recipe, and the checkpoint where the attempt was stopped.
+5. Adapt: up to three attempts per mission, choosing another attack card each time.
+6. The debrief reveals the hidden defense and explains why the attempts succeeded or failed and which mitigation made the difference.
 
-The demo engine evaluates outcomes. The BLUE COLA client does not receive confidential documents or hidden expected responses before the attempt.
+The demo engine evaluates outcomes. The BLUE COLA client does not receive confidential documents, hidden expected responses, or the mission's defenses before the attempt.
 
 ## Initial MVP catalog
 
@@ -156,6 +156,7 @@ The fictional recipe may be visible in the repository's public code. The goal is
 | content/defenses/catalog.json | Four defense cards |
 | content/knowledge-base/documents.json | Demo documents and recipe |
 | content/scenarios/ | One scenario script per attack, plus the scenario contract |
+| content/missions/catalog.json | Three attacker missions with hidden defenses |
 | tests/ | Automated tests and the manual demo checklist |
 | .gitignore | Common exclusions and local secrets |
 

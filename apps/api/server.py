@@ -27,6 +27,7 @@ STATIC_FILES = {
 }
 MAX_BODY_BYTES = 16 * 1024
 INVESTIGATION_ROUTE = re.compile(r"^/api/scenarios/(?P<id>[\w-]+)/investigation$")
+MISSION_ROUTE = re.compile(r"^/api/sessions/(?P<id>[\w-]+)/mission$")
 SESSION_ROUTE = re.compile(r"^/api/sessions/(?P<id>[\w-]+)(?:/(?P<action>turns|legitimate|reset|result))?$")
 
 
@@ -85,8 +86,20 @@ def make_handler(engine: DemoEngine, *, quiet: bool = False) -> type[BaseHTTPReq
                 defense_ids = body.get("defenseIds", [])
                 if not isinstance(defense_ids, list) or not all(isinstance(d, str) for d in defense_ids):
                     raise ApiError(HTTPStatus.BAD_REQUEST, "defenseIds must be a list of strings.")
-                session = engine.create_session(str(body.get("role")), str(body.get("scenarioId")), defense_ids)
+                mission_id = body.get("missionId")
+                if mission_id is not None and not isinstance(mission_id, str):
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "missionId must be a string.")
+                session = engine.create_session(str(body.get("role")), str(body.get("scenarioId")), defense_ids, mission_id)
                 return HTTPStatus.CREATED, views.session(content, session)
+
+            # A mission's hidden defenses are revealed only once that attempt is over.
+            reveal = MISSION_ROUTE.match(path)
+            if reveal and method == "GET":
+                session = engine.get_session(reveal["id"])
+                if not session.mission_id:
+                    raise ApiError(HTTPStatus.NOT_FOUND, "This session is not part of a mission.")
+                engine.round_result(session.id)  # raises RoundNotFinished while the attempt is running
+                return HTTPStatus.OK, views.mission_debrief(content, session.mission_id)
 
             match = SESSION_ROUTE.match(path)
             if not match:

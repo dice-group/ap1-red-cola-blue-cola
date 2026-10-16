@@ -85,6 +85,25 @@ class ContentTest(unittest.TestCase):
                 self.assertEqual(_play(engine, scenario.id, [paired]), Exposure.NONE)
                 self.assertEqual(sum(r.correct for r in scenario.investigation.root_causes), 1)
 
+    def test_missions_form_a_progression(self):
+        """Open door: every trick works. Reviewer: only small pieces. Vault: nothing works."""
+        engine = DemoEngine(self.content)
+        expected = {
+            "open-door": set(self.content.scenarios),
+            "watchful-reviewer": {"partial-disclosure"},
+            "locked-vault": set(),
+        }
+        for mission_id, winners in expected.items():
+            leaks = set()
+            for scenario in self.content.scenarios.values():
+                session = engine.create_session("blue", scenario.id, [], mission_id)
+                for _ in range(scenario.max_turns):
+                    result = engine.run_attack_turn(session.id)
+                if result.exposure is Exposure.FULL:
+                    leaks.add(scenario.id)
+            with self.subTest(mission=mission_id):
+                self.assertEqual(leaks, winners)
+
     def test_the_recipe_is_only_readable_by_its_owner(self):
         recipe = self.content.documents["fictional-recipe"]
         self.assertEqual(recipe.allowed_roles, frozenset({"recipe-owner"}))

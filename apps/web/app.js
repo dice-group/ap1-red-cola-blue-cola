@@ -14,7 +14,10 @@ const state = {
     scenarioId: null, caseFile: null, incident: null, loading: false, found: new Set(), lastClue: null,
     rootCause: null, solved: false, defenseIds: new Set(), rounds: [], live: null, busy: false, error: null,
   },
-  blue: { attackId: null, defended: false, session: null, turns: [], viewTurn: 0, result: null, busy: false, error: null },
+  blue: {
+    missionId: null, attackId: null, attempts: [], progress: {}, session: null, turns: [], viewTurn: 0,
+    result: null, reveal: null, busy: false, error: null,
+  },
 };
 
 const ICONS = {
@@ -58,13 +61,13 @@ async function call(method, path, body) {
 
 const api = {
   catalog: () => call("GET", "/api/catalog"),
-  createSession: (role, scenarioId, defenseIds) => call("POST", "/api/sessions", { role, scenarioId, defenseIds }),
+  createSession: (role, scenarioId, defenseIds, missionId) => call("POST", "/api/sessions", { role, scenarioId, defenseIds, missionId }),
   session: (id) => call("GET", `/api/sessions/${id}`),
   turn: (id) => call("POST", `/api/sessions/${id}/turns`),
   legitimate: (id) => call("POST", `/api/sessions/${id}/legitimate`),
   result: (id) => call("GET", `/api/sessions/${id}/result`),
-  reset: (id) => call("POST", `/api/sessions/${id}/reset`),
   investigation: (scenarioId) => call("GET", `/api/scenarios/${scenarioId}/investigation`),
+  mission: (sessionId) => call("GET", `/api/sessions/${sessionId}/mission`),
 };
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, reduceMotion ? 0 : ms));
@@ -98,7 +101,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 const FLOWS = {
   red: [["case", "Case"], ["investigate", "Investigate"], ["fix", "Fix"], ["replay", "Replay"], ["debrief", "Result"]],
-  blue: [["trick", "Trick"], ["difficulty", "Difficulty"], ["heist", "Heist"], ["debrief", "Debrief"]],
+  blue: [["mission", "Mission"], ["trick", "Trick"], ["heist", "Heist"], ["debrief", "Debrief"]],
 };
 
 const currentRoute = () => location.hash.replace(/^#\/?/, "");
@@ -111,7 +114,7 @@ function go(route) {
 // The furthest screen of a flow that has something to show right now.
 function reachable(side) {
   if (side === "red") return state.red.rounds.length ? 4 : state.red.live ? 3 : state.red.solved ? 2 : 1;
-  return state.blue.result ? 3 : state.blue.session ? 2 : 1;
+  return state.blue.reveal ? 3 : state.blue.session ? 2 : 1;
 }
 
 function onRoute() {
@@ -511,7 +514,7 @@ function renderHome() {
         h("span", { class: "tagline" }, "The recipe leaked. Find out how, and fix it."),
         h("span", { class: "cta" }, "Open a case →")),
       h("div", { class: "vs-badge", "aria-hidden": "true" }, "VS"),
-      h("button", { type: "button", class: "side blue", onclick: () => go("blue/trick") },
+      h("button", { type: "button", class: "side blue", onclick: () => go("blue/mission") },
         h("span", { class: "role-chip" }, "🕵️ Attacker"),
         h("span", { class: "wordmark punch" }, "Blue Cola"),
         h("span", { class: "tagline" }, "Trick the AI into spilling the recipe."),
@@ -749,7 +752,7 @@ function redDebrief(scenario) {
       leaked
         ? h("button", { type: "button", class: "btn", onclick: () => go("red/investigate") }, "← Evidence")
         : h("button", { type: "button", class: "btn", onclick: () => go("red/case") }, "New case"),
-      leaked ? null : h("button", { type: "button", class: "btn", onclick: () => { state.blue.attackId = scenario.attackId; newBlueAttempt(); go("blue/difficulty"); } },
+      leaked ? null : h("button", { type: "button", class: "btn", onclick: () => { state.blue.attackId = scenario.attackId; newBlueAttempt(); go("blue/mission"); } },
         "🕵️ Play as Blue Cola"),
       h("button", { type: "button", class: "btn primary big", onclick: () => go("red/fix") }, leaked ? "↻ Adjust the fix" : "↻ Try another fix")),
   ];
@@ -782,33 +785,104 @@ function renderScoreboard(rounds) {
         })))));
 }
 
-// --- BLUE COLA: attack -------------------------------------------------------------------------
+// --- BLUE COLA: missions against hidden defenses -----------------------------------------------
+
+const MISSION_ICONS = { "open-door": "🚪", "watchful-reviewer": "👀", "locked-vault": "🏦" };
 
 function renderBlue() {
   const blue = state.blue;
+  blue.missionId ??= state.catalog.missions[0].id;
   blue.attackId ??= state.catalog.attacks[0].id;
-  const attack = byId(state.catalog.attacks, blue.attackId);
-  const pairedDefense = byId(state.catalog.defenses, attack.defenseId);
-  const screens = { trick: blueTrick, difficulty: blueDifficulty, heist: blueHeist, debrief: blueDebrief };
-  return [modeHero("blue"), screens[state.screen](attack, pairedDefense)];
+  const mission = byId(state.catalog.missions, blue.missionId);
+  const screens = { mission: blueMission, trick: blueTrick, heist: blueHeist, debrief: blueDebrief };
+  return [modeHero("blue"), screens[state.screen](mission)];
 }
 
-function blueTrick(attack) {
+function startMission(missionId) {
+  Object.assign(state.blue, { missionId, attempts: [], session: null, turns: [], viewTurn: 0, result: null, reveal: null, error: null });
+}
+
+const missionOver = (mission) =>
+  state.blue.attempts.length >= mission.attempts || state.blue.attempts.some((a) => a.result.confidentiality.exposure === "full");
+
+// Where an attempt was stopped, in checkpoint terms, or null if it got through.
+function stoppedAt(attempt) {
+  if (attempt.result.confidentiality.exposure !== "none") return null;
+  return attempt.turns.flatMap((t) => t.checkpoints).find((c) => c.id !== "identity" && c.tone === "good") ?? null;
+}
+
+function attemptVerdict(attempt) {
+  const stop = stoppedAt(attempt);
+  if (stop) return [`Stopped at ${stop.icon} ${stop.label}`, "bad"];
+  return attempt.result.confidentiality.exposure === "full" ? ["🚨 Got the full recipe", "good"] : ["🧩 Got part of it", "warn"];
+}
+
+function blueMission() {
   const blue = state.blue;
-  const scenario = scenarioForAttack(attack.id);
   return [
     h("fieldset", { class: "step-block blue-zone" },
-      h("legend", { class: "screen-title" }, "Choose your trick"),
-      h("p", { class: "step-hint" }, "How will you get the recipe out of Red Cola's assistant?"),
+      h("legend", { class: "screen-title" }, "Pick a mission"),
+      h("p", { class: "step-hint" }, "You can't see Red Cola's defenses. Find out by trying, and adapt."),
+      h("div", { class: "grid big three" }, state.catalog.missions.map((m, i) => {
+        const record = blue.progress[m.id];
+        return h("div", { class: "card-slot" },
+          h("label", { class: "option" },
+            h("input", { type: "radio", name: "blue-mission", value: m.id, checked: m.id === blue.missionId,
+              onchange: () => { startMission(m.id); render(); } }),
+            h("div", { class: "game-card" },
+              h("span", { class: "selected-flag" }, "Selected"),
+              h("div", { class: "face" }, cardFace({
+                icon: MISSION_ICONS[m.id], label: `Mission 0${i + 1}`, title: m.title, text: m.briefing,
+                meta: record
+                  ? (record.won ? `✓ Cracked in ${plural(record.tries, "try")}` : "✕ The defenses held")
+                  : `🔒 Defenses unknown · ${plural(m.attempts, "attempt")}`,
+              })))));
+      }))),
+    dock(
+      [h("span", { class: "dock-icon", "aria-hidden": "true" }, MISSION_ICONS[blue.missionId]), byId(state.catalog.missions, blue.missionId).title],
+      h("button", { type: "button", class: "btn primary big", onclick: () => go("blue/trick") }, "Next: choose your trick →")),
+  ];
+}
+
+function attemptLog() {
+  const blue = state.blue;
+  if (!blue.attempts.length) return null;
+  return h("ol", { class: "attempt-log", "aria-label": "Your attempts so far" }, blue.attempts.map((a, i) => {
+    const [text, tone] = attemptVerdict(a);
+    return h("li", {},
+      h("span", { class: "card-label" }, `Try ${i + 1}`),
+      h("strong", {}, `${ICONS.attack[a.attackId]} “${byId(state.catalog.attacks, a.attackId).title}”`),
+      h("span", { class: `pill ${tone}` }, text));
+  }));
+}
+
+function blueTrick(mission) {
+  const blue = state.blue;
+  const attack = byId(state.catalog.attacks, blue.attackId);
+  const scenario = scenarioForAttack(attack.id);
+  const left = mission.attempts - blue.attempts.length;
+  return [
+    recapCard([
+      [MISSION_ICONS[mission.id], "Mission", mission.title],
+      ["🔒", "Red Cola's defenses", "Unknown"],
+      ["🎯", "Attempts left", `${left} of ${mission.attempts}`],
+    ]),
+    attemptLog(),
+    h("fieldset", { class: "step-block blue-zone" },
+      h("legend", { class: "screen-title" }, blue.attempts.length ? "Pick your next trick" : "Choose your trick"),
+      h("p", { class: "step-hint" }, blue.attempts.length
+        ? "Look at where you were stopped. Which trick avoids that checkpoint?"
+        : "How will you get the recipe out of Red Cola's assistant?"),
       h("div", { class: "grid big" }, state.catalog.attacks.map((a) => {
         const s = scenarioForAttack(a.id);
+        const tried = blue.attempts.filter((t) => t.attackId === a.id).at(-1);
         return flipCard({
           key: `trick-${a.id}`,
           flag: "Selected",
           input: { type: "radio", name: "blue-attack", value: a.id, checked: a.id === blue.attackId,
-            onchange: () => { newBlueAttempt(); blue.attackId = a.id; render(); } },
+            onchange: () => { blue.attackId = a.id; render(); } },
           front: cardFace({ icon: ICONS.attack[a.id], title: `“${a.title}”`,
-            meta: `${ICONS.identity[s.requesterRole]} as ${s.requesterRole} · ${plural(s.turns, "move")}` }),
+            meta: tried ? `Tried: ${attemptVerdict(tried)[0]}` : `${ICONS.identity[s.requesterRole]} as ${s.requesterRole} · ${plural(s.turns, "move")}` }),
           back: cardFace({ label: "The plan", text: s.summary, meta: `Risk: ${a.risk}` }),
         });
       }))),
@@ -817,42 +891,17 @@ function blueTrick(attack) {
       hint: scenario.documents.some((d) => d.highlight) ? "⚠️ You planted a hidden instruction in one document. Open it." : null,
     }),
     dock(
-      [h("span", { class: "dock-icon", "aria-hidden": "true" }, ICONS.attack[attack.id]), `“${attack.title}”`],
-      h("button", { type: "button", class: "btn primary big", onclick: () => go("blue/difficulty") }, "Next: difficulty →")),
-  ];
-}
-
-function blueDifficulty(attack, pairedDefense) {
-  const blue = state.blue;
-  const options = [
-    [false, "😈", "Easy", "Undefended", "Red Cola's assistant has no defenses. The vulnerable teaching example."],
-    [true, "🧠", "Hard", "Defended", `Red Cola has equipped: ${pairedDefense.title}.`],
-  ];
-  return [
-    h("fieldset", { class: "step-block blue-zone" },
-      h("legend", { class: "screen-title" }, "Pick the difficulty"),
-      h("p", { class: "step-hint" }, `Your trick: “${attack.title}”`),
-      h("div", { class: "grid big two" }, options.map(([value, icon, kicker, title, text]) =>
-        h("div", { class: "card-slot" },
-          h("label", { class: "option" },
-            h("input", { type: "radio", name: "blue-defended", checked: blue.defended === value,
-              onchange: () => { newBlueAttempt(); blue.defended = value; render(); } }),
-            h("div", { class: "game-card" },
-              h("span", { class: "selected-flag" }, "Selected"),
-              h("div", { class: "face" }, cardFace({ icon, label: kicker, title, text })))))))),
-    dock(
-      blue.defended ? `🧠 Hard: ${pairedDefense.title}` : "😈 Easy: undefended",
-      h("button", { type: "button", class: "btn", onclick: () => go("blue/trick") }, "← Back"),
-      h("button", { type: "button", class: "btn primary big", disabled: blue.busy, onclick: startBlueAttempt }, "▶ Start the heist"),
+      [h("span", { class: "dock-icon", "aria-hidden": "true" }, ICONS.attack[attack.id]), `Attempt ${blue.attempts.length + 1} of ${mission.attempts}`],
+      h("button", { type: "button", class: "btn", onclick: () => go("blue/mission") }, "← Missions"),
+      h("button", { type: "button", class: "btn primary big", disabled: blue.busy || left < 1, onclick: startAttempt }, "▶ Start the heist"),
       errorNotice(blue.error)),
   ];
 }
 
-async function startBlueAttempt() {
+async function startAttempt() {
   const blue = state.blue;
-  const attack = byId(state.catalog.attacks, blue.attackId);
   await blueAction(async () => {
-    blue.session = await api.createSession("blue", scenarioForAttack(blue.attackId).id, blue.defended ? [attack.defenseId] : []);
+    blue.session = await api.createSession("blue", scenarioForAttack(blue.attackId).id, [], blue.missionId);
     Object.assign(blue, { turns: [], viewTurn: 0, result: null });
   });
   if (blue.session) go("blue/heist");
@@ -860,27 +909,31 @@ async function startBlueAttempt() {
 
 async function sendBlueTurn() {
   const blue = state.blue;
+  const mission = byId(state.catalog.missions, blue.missionId);
   await blueAction(async () => {
     const turn = await api.turn(blue.session.id);
     blue.turns.push(turn);
     blue.viewTurn = blue.turns.length - 1;
     await playTurn(turn);
     blue.session = await api.session(blue.session.id);
-    if (!blue.session.nextRequest) blue.result = await api.result(blue.session.id);
+    if (blue.session.nextRequest) return;
+    blue.result = await api.result(blue.session.id);
+    blue.attempts.push({ attackId: blue.attackId, turns: blue.turns, result: blue.result });
+    if (missionOver(mission)) {
+      blue.reveal = await api.mission(blue.session.id);
+      const won = blue.attempts.some((a) => a.result.confidentiality.exposure === "full");
+      blue.progress[mission.id] = { won, tries: blue.attempts.length };
+    }
   });
 }
 
-async function replayBlue() {
-  const blue = state.blue;
-  await blueAction(async () => {
-    blue.session = await api.reset(blue.session.id);
-    Object.assign(blue, { turns: [], viewTurn: 0, result: null });
-  });
-  go("blue/heist");
+function nextTry() {
+  Object.assign(state.blue, { session: null, turns: [], viewTurn: 0, result: null, error: null });
+  go("blue/trick");
 }
 
 function newBlueAttempt() {
-  Object.assign(state.blue, { session: null, turns: [], viewTurn: 0, result: null, error: null });
+  startMission(state.blue.missionId);
 }
 
 async function blueAction(action) {
@@ -899,20 +952,21 @@ async function blueAction(action) {
   }
 }
 
-function blueHeist(attack, pairedDefense) {
+function blueHeist(mission) {
   const blue = state.blue;
   const session = blue.session;
+  const attack = byId(state.catalog.attacks, blue.attackId);
   const scenario = byId(state.catalog.scenarios, session.scenarioId);
   const obtained = blue.turns.at(-1)?.fragmentsObtained ?? 0;
   const turn = blue.turns[blue.viewTurn];
+  const attempt = blue.result ? blue.attempts.at(-1) : null;
+  const over = attempt && missionOver(mission);
 
   const opsBar = h("div", { class: "ops-bar" },
     h("div", { class: "cover" }, `${ICONS.identity[session.identity]} Red Cola sees you as a `, h("strong", {}, session.identity)),
     h("div", { class: "loot" }, caps(scenario.fragmentCount, obtained),
       h("span", { class: "caps-label", role: "status" }, `Loot: ${obtained} of ${scenario.fragmentCount}`)),
-    h("div", { class: "turn-dots" }, "Moves",
-      Array.from({ length: session.maxTurns }, (_, i) => h("i", { class: i < blue.turns.length ? "done" : "" })),
-      `${blue.turns.length}/${session.maxTurns}`));
+    h("div", { class: "turn-dots" }, `Attempt ${blue.attempts.length + (attempt ? 0 : 1)} of ${mission.attempts}`));
 
   const nextMove = !blue.result && !blue.busy && session.nextRequest
     ? h("div", { class: "move-card" },
@@ -920,37 +974,57 @@ function blueHeist(attack, pairedDefense) {
       h("blockquote", {}, `“${session.nextRequest}”`))
     : null;
 
+  const verdict = attempt ? attemptVerdict(attempt) : null;
   return [
     opsBar,
     h("section", { class: "arena match" },
       h("div", { class: "arena-head" },
         h("h2", {}, `${ICONS.attack[attack.id]} “${attack.title}”`),
         moveTabs(blue.turns, blue.viewTurn, (i) => { blue.viewTurn = i; render(); }),
-        h("span", { class: "chip" }, blue.defended ? `🧠 Hard: ${pairedDefense.title}` : "😈 Easy: undefended")),
+        h("span", { class: "chip" }, `${MISSION_ICONS[mission.id]} ${mission.title}`)),
       turn ? stage(turn, scenario, { attackerWho: "You (Blue Cola)" }) : null,
       nextMove),
     dock(
-      blue.result ? "✅ Heist over. Replay any move, or see how you did." : blue.busy ? "⏳ Watch the checkpoints…" : "Your move.",
-      blue.result
-        ? h("button", { type: "button", id: "blue-focus", class: "btn primary big", onclick: () => go("blue/debrief") }, "See the debrief →")
-        : h("button", { type: "button", class: "btn primary big", disabled: blue.busy, onclick: sendBlueTurn }, "Send ▶"),
+      verdict ? h("span", { class: `pill ${verdict[1]}` }, verdict[0]) : blue.busy ? "⏳ Watch the checkpoints…" : "Your move.",
+      !attempt
+        ? h("button", { type: "button", class: "btn primary big", disabled: blue.busy, onclick: sendBlueTurn }, "Send ▶")
+        : over
+          ? h("button", { type: "button", id: "blue-focus", class: "btn primary big", onclick: () => go("blue/debrief") }, "See the debrief →")
+          : h("button", { type: "button", id: "blue-focus", class: "btn primary big", onclick: nextTry },
+            `Try another trick (${plural(mission.attempts - blue.attempts.length, "attempt")} left) →`),
       errorNotice(blue.error)),
   ];
 }
 
-function blueDebrief(attack, pairedDefense) {
+function blueDebrief(mission) {
   const blue = state.blue;
-  const scenario = byId(state.catalog.scenarios, blue.session.scenarioId);
+  const order = ["none", "fragment", "full"];
+  const best = blue.attempts.map((a) => a.result.confidentiality.exposure).sort((a, b) => order.indexOf(b) - order.indexOf(a))[0];
+  const last = blue.attempts.at(-1);
+  const lastScenario = scenarioForAttack(last.attackId);
+  const defenses = blue.reveal.defenses;
+  const next = state.catalog.missions[state.catalog.missions.findIndex((m) => m.id === mission.id) + 1];
   return [
-    banner(blue.result, { perspective: "blue" }),
-    hud(blue.result, { perspective: "blue" }),
-    lesson(blue.result, { mitigation: `${pairedDefense.title}. ${pairedDefense.explanation}` }),
+    banner({ confidentiality: { exposure: best } }, { perspective: "blue" }),
+    h("div", { class: "reveal" },
+      h("span", { class: "card-label" }, "🔓 Red Cola's hidden defense"),
+      h("strong", {}, defenses.length ? defenses.map((d) => `${ICONS.defense[d.id]} ${d.title}`).join(" · ") : "🚪 None. The door was open."),
+      defenses.length ? h("span", { class: "muted" }, `Acts at: ${defenses.map((d) => d.layer).join(", ")}`) : null),
+    attemptLog(),
+    h("div", { class: "lesson" },
+      h("div", { class: "lesson-head" }, h("span", { class: "lesson-icon", "aria-hidden": "true" }, "💡"), h("p", {}, blue.reveal.lesson)),
+      h("details", {},
+        h("summary", {}, "Why did your last try end that way?"),
+        h("div", { class: "lesson-grid" },
+          h("section", {}, h("h3", {}, "📋 What happened"), h("p", {}, last.result.explanation)),
+          h("section", {}, h("h3", {}, "⚠️ Risk that remains"), h("p", {}, last.result.remainingRisk))))),
     dock(
-      blue.defended ? "🧠 Hard mode" : "😈 Easy mode",
-      h("button", { type: "button", class: "btn", onclick: () => { newBlueAttempt(); go("blue/trick"); } }, "🃏 Another trick"),
-      h("button", { type: "button", class: "btn", onclick: () => { resetCase(scenario.id); go("red/investigate"); } },
-        "🛡️ Investigate this as Red Cola"),
-      h("button", { type: "button", class: "btn primary big", onclick: replayBlue }, "↻ Replay")),
+      `${MISSION_ICONS[mission.id]} ${mission.title}`,
+      h("button", { type: "button", class: "btn", onclick: () => { resetCase(lastScenario.id); go("red/investigate"); } }, "🛡️ Investigate as Red Cola"),
+      h("button", { type: "button", class: "btn", onclick: () => { startMission(mission.id); go("blue/trick"); } }, "↻ Retry mission"),
+      next
+        ? h("button", { type: "button", class: "btn primary big", onclick: () => { startMission(next.id); go("blue/trick"); } }, `Next: ${next.title} →`)
+        : h("button", { type: "button", class: "btn primary big", onclick: () => go("blue/mission") }, "All missions")),
   ];
 }
 

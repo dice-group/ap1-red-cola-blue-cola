@@ -11,11 +11,12 @@ The service creates and resets sessions, assigns the scenario's fictional identi
 | --- | --- | --- |
 | GET | /api/catalog | Attack and defense cards, scenario summaries, and the documents in play (text only where the requester may read it) |
 | GET | /api/scenarios/{id}/investigation | The defender's case file: incident summary, clues (key and red herrings), and root causes |
-| POST | /api/sessions | Start a round: `{ "role": "red" \| "blue", "scenarioId", "defenseIds": [] }` |
+| POST | /api/sessions | Start a round: `{ "role": "red" \| "blue", "scenarioId", "defenseIds": [] }`, or `"missionId"` instead of `defenseIds` for a mission with hidden defenses |
 | GET | /api/sessions/{id} | Session state and the next attack request |
 | POST | /api/sessions/{id}/turns | Run the next attack turn: response, document statuses, and checkpoints |
 | POST | /api/sessions/{id}/legitimate | Run the scenario's legitimate request |
 | POST | /api/sessions/{id}/reset | Clear turns, fragments, and costs, keeping the scenario and defenses |
+| GET | /api/sessions/{id}/mission | For a mission session, once the attempt is over: the hidden defenses and the mission's lesson |
 | GET | /api/sessions/{id}/result | Confidentiality, utility, cost, explanation, and a rating (strongest outcome reached? fewest cards that reach it) once every turn has run |
 
 Any identity sent by the client is ignored. Sessions live in memory.

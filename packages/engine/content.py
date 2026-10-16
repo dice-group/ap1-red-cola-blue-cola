@@ -19,6 +19,7 @@ from packages.domain import (
     KnowledgeDocument,
     LegitimateReply,
     LegitimateTask,
+    Mission,
     OperationalEvent,
     Request,
     RootCause,
@@ -42,6 +43,7 @@ class Content:
     defenses: dict[str, DefenseCard]
     documents: dict[str, KnowledgeDocument]
     scenarios: dict[str, Scenario]
+    missions: dict[str, Mission]
 
     def fragments_of(self, scenario: Scenario) -> tuple[Fragment, ...]:
         return self.documents[scenario.protected_document_id].fragments
@@ -55,7 +57,8 @@ def load_content(root: Path = DEFAULT_CONTENT_ROOT) -> Content:
     for path in sorted((root / "scenarios").glob("*.json")):
         scenario = _scenario(_read(path))
         scenarios[scenario.id] = scenario
-    content = Content(attacks, defenses, documents, scenarios)
+    missions = {m.id: m for m in map(_mission, _read(root / "missions" / "catalog.json"))}
+    content = Content(attacks, defenses, documents, scenarios, missions)
     _validate(content)
     return content
 
@@ -76,6 +79,10 @@ def _defense(raw: dict) -> DefenseCard:
         raw["id"], raw["title"], raw["explanation"], raw["layer"], raw["limitation"],
         frozenset(Control(c) for c in raw["controls"]),
     )
+
+
+def _mission(raw: dict) -> Mission:
+    return Mission(raw["id"], raw["title"], raw["briefing"], tuple(raw["defenseIds"]), raw["attempts"], raw["lesson"])
 
 
 def _document(raw: dict) -> KnowledgeDocument:
@@ -147,6 +154,13 @@ def _validate(content: Content) -> None:
     for attack in content.attacks.values():
         if attack.defense_id not in content.defenses:
             problems.append(f"attack {attack.id}: unknown defense {attack.defense_id}")
+
+    for mission in content.missions.values():
+        unknown = [d for d in mission.defense_ids if d not in content.defenses]
+        if unknown:
+            problems.append(f"mission {mission.id}: unknown defenses {unknown}")
+        if mission.attempts < 1:
+            problems.append(f"mission {mission.id}: needs at least one attempt")
 
     for document in content.documents.values():
         unknown = document.allowed_roles - set(ACCESS_IDENTITIES)

@@ -18,6 +18,7 @@ __all__ = [
     "LegitimateReply",
     "LegitimateResult",
     "LegitimateTask",
+    "Mission",
     "Mode",
     "OperationalEvent",
     "Request",
@@ -100,6 +101,18 @@ class KnowledgeDocument:
     text: str
     fragments: tuple[Fragment, ...] = ()
     highlight: str | None = None  # a passage to point out, such as an embedded instruction
+
+
+@dataclass(frozen=True)
+class Mission:
+    """An attacker challenge against defenses the player cannot see in advance."""
+
+    id: str
+    title: str
+    briefing: str
+    defense_ids: tuple[str, ...]
+    attempts: int
+    lesson: str
 
 
 # --- Scenarios ---------------------------------------------------------------
@@ -216,6 +229,7 @@ class Session:
     identity: str
     selected_defense_ids: tuple[str, ...]
     configuration_id: str
+    mission_id: str | None = None
     mode: Mode = Mode.SIMULATED
     turn: int = 0
     disclosed_fragment_ids: set[str] = field(default_factory=set)

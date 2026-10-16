@@ -59,7 +59,17 @@ class DemoEngine:
 
     # --- Sessions --------------------------------------------------------------
 
-    def create_session(self, role: str, scenario_id: str, defense_ids: list[str]) -> Session:
+    def create_session(
+        self, role: str, scenario_id: str, defense_ids: list[str], mission_id: str | None = None
+    ) -> Session:
+        """Start a round. A mission supplies its own hidden defenses instead of `defense_ids`."""
+        if mission_id is not None:
+            mission = self.content.missions.get(mission_id)
+            if mission is None:
+                raise InvalidAction(f"Unknown mission: {mission_id!r}")
+            if defense_ids:
+                raise InvalidAction("A mission sets its own defenses.")
+            defense_ids = list(mission.defense_ids)
         try:
             game_role = GameRole(role)
         except ValueError as error:
@@ -77,6 +87,7 @@ class DemoEngine:
             identity=scenario.requester_role,  # assigned here, never taken from a message
             selected_defense_ids=selected,
             configuration_id=configuration.id,
+            mission_id=mission_id,
             mode=self.assistant.mode,
         )
         with self._lock:

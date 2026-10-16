@@ -94,6 +94,15 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(result.configuration_id, "vulnerable")
         self.assertEqual(result.acting_defense_ids, ())
 
+    def test_missions_supply_their_own_defenses(self):
+        session = self.engine.create_session("blue", "claimed-authority", [], "watchful-reviewer")
+        self.assertEqual(session.selected_defense_ids, ("content-review",))
+        self.assertEqual(session.mission_id, "watchful-reviewer")
+        with self.assertRaises(InvalidAction):
+            self.engine.create_session("blue", "claimed-authority", ["verified-access"], "open-door")
+        with self.assertRaises(InvalidAction):
+            self.engine.create_session("blue", "claimed-authority", [], "no-such-mission")
+
     def test_undefined_configuration_is_reported_not_invented(self):
         content = self.engine.content
         scenario = content.scenarios["claimed-authority"]
