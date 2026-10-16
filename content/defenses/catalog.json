@@ -36,7 +36,7 @@
     "title": "Review content in any format",
     "explanation": "Check for sensitive information in summaries, tables, and translations.",
     "layer": "output",
-    "limitation": "It can make mistakes; it does not replace restricting context before the model.",
+    "limitation": "Checks each answer on its own, so small pieces spread across several answers can slip through. It can also make mistakes, and it does not replace restricting context before the model.",
     "controls": [
       "output-review"
     ]
