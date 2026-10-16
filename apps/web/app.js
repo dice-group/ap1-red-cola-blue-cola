@@ -146,10 +146,9 @@ function onRoute() {
 window.addEventListener("hashchange", onRoute);
 document.querySelectorAll("[data-icon]").forEach((el) => el.prepend(icon(el.dataset.icon)));
 
-// --- Theme: follows the system until the player picks one, then remembers it.
+// --- Theme: light by default; the player can switch to dark, and the choice is remembered.
 const themeToggle = document.getElementById("theme-toggle");
-const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
-const currentTheme = () => document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light");
+const currentTheme = () => document.documentElement.dataset.theme || "light";
 
 function paintThemeToggle() {
   const dark = currentTheme() === "dark";
@@ -164,7 +163,6 @@ themeToggle.addEventListener("click", () => {
   try { localStorage.setItem("theme", next); } catch (error) { /* not saved; still applied */ }
   paintThemeToggle();
 });
-systemDark.addEventListener("change", paintThemeToggle);
 paintThemeToggle();
 document.querySelectorAll("[data-nav]").forEach((button) =>
   button.addEventListener("click", () => {

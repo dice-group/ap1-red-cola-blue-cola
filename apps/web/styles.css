@@ -55,7 +55,7 @@
   color-scheme: light;
 }
 
-/* ---------- Tokens: night print (dark) ---------- */
+/* ---------- Tokens: night print (dark), only when the player picks it ---------- */
 :root[data-theme="dark"] {
   --paper: #15120e;
   --surface: #221d17;
@@ -77,30 +77,6 @@
   --bad-tint: rgb(255 93 80 / 0.14);
   color-scheme: dark;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #15120e;
-    --surface: #221d17;
-    --inset: #2c251c;
-    --ink: #f1e7d3;
-    --ink-soft: #d8cdb8;
-    --muted: #a39782;
-    --hairline: rgb(241 231 211 / 0.14);
-    --shadow-color: #000;
-    --red: #e5372a;
-    --blue: #4a76ff;
-    --blueprint: #10276e; --redprint: #5a120c; --halftone: rgb(0 0 0 / 0.3);
-    --manila: #4a3b1f;
-    --highlight: #8c6d00;
-    --good: #52c47c;
-    --warn: #f1b52e;
-    --bad: #ff5d50;
-    --good-tint: rgb(82 196 124 / 0.14);
-    --bad-tint: rgb(255 93 80 / 0.14);
-    color-scheme: dark;
-  }
-}
-
 /* ---------- Worlds ---------- */
 body {
   margin: 0;
@@ -364,8 +340,8 @@ fieldset:disabled .option { cursor: not-allowed; opacity: 0.55; }
 .card-label { margin-bottom: 6px; }
 .card-meta { margin: auto 0 0; padding-top: 12px; font-size: 0.8rem; color: var(--muted); }
 .game-card p.card-meta { color: var(--muted); font-size: 0.8rem; }
-.grid.big .sticker { width: 68px; height: 68px; margin-bottom: 20px; }
-.grid.big .sticker .ico { width: 34px; height: 34px; }
+.grid.big .sticker { width: 96px; height: 96px; margin-bottom: 22px; border-width: 3px; box-shadow: 5px 5px 0 var(--shadow-color); }
+.grid.big .sticker .ico { width: 52px; height: 52px; stroke-width: 1.6; }
 
 .flip-inner { display: grid; transition: transform 0.45s; transform-style: preserve-3d; }
 .face { grid-area: 1 / 1; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
@@ -452,7 +428,11 @@ fieldset:disabled .option { cursor: not-allowed; opacity: 0.55; }
 .class-tag.confidential { color: #b3201a; }
 .class-tag.warn { color: #8a5200; background: #ffe7a6; }
 .class-tag .ico { width: 1em; height: 1em; }
-.doc.sent { opacity: 0.5; }
+.doc.sent::after {
+  content: "→ sent"; position: absolute; right: 8px; top: -11px; /* sits on the coloured top edge, clear of the title */
+  font: 700 0.6rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 1px 5px; background: #1c1712; color: #fffdf6; border-radius: 2px;
+}
 .doc-stamp {
   position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
   font: 400 0.95rem var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: #c8261c;
