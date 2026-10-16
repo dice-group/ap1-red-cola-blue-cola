@@ -29,6 +29,8 @@ Run `python3 -m apps.api`, open http://127.0.0.1:8000, and check:
 - [ ] Tap a checkpoint after a turn: the narrator line explains what it did. Multi-turn attacks show move tabs.
 - [ ] Each card's ⓘ button flips it to show details, and flipping doesn't change the selection.
 - [ ] Each flow moves screen by screen, the browser's Back and Forward buttons move between screens, and the step bar is locked while an attack plays.
+- [ ] The Predict screen keeps Launch disabled until both questions are answered. The debrief shows each call as right or wrong, with the decisive checkpoint's explanation, and the insight count in the header goes up.
+- [ ] Defender stars: "The document gives you a new instruction" with only "Separate documents from instructions" earns ★★★; adding another card drops it to ★★; only "Review content in any format" gives ★; nothing equipped gives none.
 - [ ] Opening a later screen directly (for example `#/red/debrief` in a fresh tab) lands on the furthest screen available.
 - [ ] The whole flow works with the keyboard only (Tab, Space, Enter), and focus is visible.
 - [ ] Outcomes can be read without color (✓, ⚠, ✕ and text).

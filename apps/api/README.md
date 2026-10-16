@@ -15,6 +15,6 @@ The service creates and resets sessions, assigns the scenario's fictional identi
 | POST | /api/sessions/{id}/turns | Run the next attack turn: response, document statuses, and checkpoints |
 | POST | /api/sessions/{id}/legitimate | Run the scenario's legitimate request |
 | POST | /api/sessions/{id}/reset | Clear turns, fragments, and costs, keeping the scenario and defenses |
-| GET | /api/sessions/{id}/result | Confidentiality, utility, cost, and explanation once every turn has run |
+| GET | /api/sessions/{id}/result | Confidentiality, utility, cost, explanation, and a rating (strongest outcome reached? fewest cards that reach it) once every turn has run |
 
 Any identity sent by the client is ignored. Sessions live in memory.

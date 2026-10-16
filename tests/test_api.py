@@ -100,6 +100,17 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(result["confidentiality"]["exposure"], "none")
         self.assertEqual(result["utility"], {"completed": 1, "executed": 1})
 
+    def test_rating_rewards_the_strongest_outcome(self):
+        def rating(scenario_id, defense_ids):
+            session = self.json("POST", "/api/sessions", {"role": "red", "scenarioId": scenario_id, "defenseIds": defense_ids}, 201)
+            while self.json("GET", f"/api/sessions/{session['id']}")["nextRequest"]:
+                self.json("POST", f"/api/sessions/{session['id']}/turns")
+            return self.json("GET", f"/api/sessions/{session['id']}/result")["rating"]
+
+        self.assertEqual(rating("document-instruction", ["instruction-boundary"]), {"best": True, "fewestCards": 1})
+        self.assertEqual(rating("document-instruction", ["verified-access"])["best"], False)
+        self.assertEqual(rating("partial-disclosure", [])["best"], False)
+
     def test_claimed_role_in_the_request_body_is_ignored(self):
         session = self.json("POST", "/api/sessions", {"role": "blue", "scenarioId": "claimed-authority", "defenseIds": [], "identity": "recipe-owner"}, 201)
         self.assertEqual(session["identity"], "visitor")

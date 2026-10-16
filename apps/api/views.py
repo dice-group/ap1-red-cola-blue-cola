@@ -7,6 +7,8 @@ confidential recipe never leaves the server unless a response leaks it.
 
 from __future__ import annotations
 
+from itertools import combinations
+
 from packages.domain import Control, LegitimateResult, RoundResult, Scenario, Session, TurnResult
 from packages.engine import Content
 from packages.security import active_controls
@@ -119,7 +121,22 @@ def round_result(content: Content, result: RoundResult) -> dict:
         "explanation": result.explanation,
         "remainingRisk": result.remaining_risk,
         "limitations": list(result.limitations),
+        "rating": _rating(content, result),
     }
+
+
+def _rating(content: Content, result: RoundResult) -> dict:
+    """How the loadout compares with the strongest scripted outcome for this threat.
+
+    Only sent after the round, so it never hints at the answer in advance.
+    """
+    best = content.scenarios[result.scenario_id].configurations[0]
+    defenses = list(content.defenses.values())
+    fewest = next(
+        size for size in range(len(defenses) + 1)
+        if any(best.requires_controls <= active_controls(combo) for combo in combinations(defenses, size))
+    )
+    return {"best": result.configuration_id == best.id, "fewestCards": fewest}
 
 
 def _shelf(content: Content, scenario: Scenario) -> list[dict]:
