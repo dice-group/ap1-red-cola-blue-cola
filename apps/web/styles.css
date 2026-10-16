@@ -25,8 +25,8 @@
   --red-deep: #961a11;
   --blue: #1f4fd8;
   --blue-deep: #13318c;
-  --blueprint: #1b3d9e;
-  --redprint: #a8231a;
+  --blueprint: #163184;
+  --redprint: #8c1c14;
   --halftone: rgb(0 0 0 / 0.16);
   --grid-line: rgb(255 255 255 / 0.09);
   --grid-major: rgb(255 255 255 / 0.17);
@@ -639,6 +639,8 @@ fieldset:disabled .option { cursor: not-allowed; opacity: 0.55; }
 .note p { margin: 4px 0 0; font-size: 0.9rem; color: var(--ink-soft); }
 
 .root-cause { padding: 18px; animation: rise 0.3s ease-out; }
+.root-cause > legend { float: left; width: 100%; color: var(--ink); }
+.root-cause > legend + * { clear: both; }
 .cause { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; font-size: 0.95rem; background: var(--surface); border: 2px solid var(--ink); border-radius: 4px; }
 .cause input { margin-top: 4px; accent-color: var(--ink); }
 .cause:hover { box-shadow: 3px 3px 0 var(--shadow-color); }

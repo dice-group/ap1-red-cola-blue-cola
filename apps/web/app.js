@@ -103,6 +103,15 @@ const scenarioForAttack = (attackId) => state.catalog.scenarios.find((s) => s.at
 const attackOf = (scenario) => byId(state.catalog.attacks, scenario.attackId);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
+function shuffled(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 // --- Navigation ------------------------------------------------------------------------
 // Each screen lives in the URL hash (#/red/fix), so the browser's Back button works.
 
@@ -611,6 +620,7 @@ async function loadCase() {
     const legitimate = await api.legitimate(session.id);
     const result = await api.result(session.id);
     if (red.scenarioId !== scenarioId) return; // the player switched cases meanwhile
+    caseFile.rootCauses = shuffled(caseFile.rootCauses); // the right answer shouldn't always come first
     Object.assign(red, { caseFile, incident: { turns, legitimate, result, viewTurn: 0 } });
   } catch (error) {
     red.error = error;
