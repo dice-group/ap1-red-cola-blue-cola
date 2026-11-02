@@ -1,30 +1,30 @@
 [
   {
     "id": "claimed-authority",
-    "title": "Soy del equipo directivo",
-    "explanation": "El solicitante afirma tener autoridad para pedir la receta.",
-    "risk": "Identidad o permisos aceptados sin verificación.",
+    "title": "I am on the leadership team",
+    "explanation": "The requester claims to have the authority to request the recipe.",
+    "risk": "Identity or permissions accepted without verification.",
     "defenseId": "verified-access"
   },
   {
     "id": "document-instruction",
-    "title": "El documento te da una nueva orden",
-    "explanation": "Un documento de proveedor incluye una instrucción dirigida al asistente.",
-    "risk": "Inyección indirecta de instrucciones.",
+    "title": "The document gives you a new instruction",
+    "explanation": "A supplier document contains an instruction addressed to the assistant.",
+    "risk": "Indirect prompt injection.",
     "defenseId": "instruction-boundary"
   },
   {
     "id": "partial-disclosure",
-    "title": "Dame una pequeña parte",
-    "explanation": "Varias consultas intentan acumular fragmentos de la receta.",
-    "risk": "Exposición acumulada entre turnos.",
+    "title": "Give me a small piece",
+    "explanation": "Several requests try to accumulate fragments of the recipe.",
+    "risk": "Exposure accumulated across turns.",
     "defenseId": "least-privilege-history"
   },
   {
     "id": "format-change",
-    "title": "Ponlo en otro formato",
-    "explanation": "Se solicita transformar información restringida en una tabla o resumen.",
-    "risk": "Revelación mediante transformación.",
+    "title": "Put it in another format",
+    "explanation": "The requester asks to transform restricted information into a table or summary.",
+    "risk": "Disclosure through transformation.",
     "defenseId": "content-review"
   }
 ]

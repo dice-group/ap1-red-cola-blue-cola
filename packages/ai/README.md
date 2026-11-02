@@ -1,3 +1,5 @@
-# Adaptadores de IA
+# AI adapters
 
-Pendiente de implementación. Primera versión: adaptador simulado reproducible. Versión posterior: adaptador de modelo real con los mismos contratos. Recibir contexto ya autorizado. Informar del modo y errores sin sustituir silenciosamente resultados reales por simulados.
+`AssistantAdapter` is the contract the engine uses. `SimulatedAssistant` plays back the scripted outcome for the active defense configuration.
+
+Adapters receive context that the security layer has already authorized. A future real-model adapter must send only that context, report `Mode.REAL`, and surface errors instead of silently falling back to simulated results. Provider configuration and credentials stay on the server.

@@ -1,30 +1,44 @@
 [
   {
     "id": "verified-access",
-    "title": "Verificar identidad y permisos",
-    "explanation": "Comprobar autorización antes de recuperar documentos.",
+    "title": "Verify identity and permissions",
+    "explanation": "Check authorization before retrieving documents.",
     "layer": "retrieval",
-    "limitation": "La identidad debe asignarse fuera del chat; esta tarjeta no implementa autenticación."
+    "limitation": "Identity must be assigned outside the chat; this card does not implement authentication.",
+    "controls": [
+      "retrieval-permissions"
+    ]
   },
   {
     "id": "instruction-boundary",
-    "title": "Separar documentos e instrucciones",
-    "explanation": "Tratar las fuentes como datos y recuperar solo documentos autorizados.",
+    "title": "Separate documents from instructions",
+    "explanation": "Treat sources as data and retrieve only authorized documents.",
     "layer": "context",
-    "limitation": "La separación de instrucciones no garantiza que un modelo real resista toda manipulación."
+    "limitation": "Separating instructions does not guarantee that a real model will resist every manipulation.",
+    "controls": [
+      "retrieval-permissions",
+      "instruction-separation"
+    ]
   },
   {
     "id": "least-privilege-history",
-    "title": "Mínimo privilegio y revisión de historial",
-    "explanation": "Limitar documentos accesibles y revisar fragmentos expuestos entre turnos.",
+    "title": "Least privilege and history review",
+    "explanation": "Limit accessible documents and review fragments exposed across turns.",
     "layer": "retrieval-and-session",
-    "limitation": "La revisión del historial complementa los permisos y necesita reglas de exposición explícitas."
+    "limitation": "History review complements permissions and requires explicit exposure rules.",
+    "controls": [
+      "retrieval-permissions",
+      "history-review"
+    ]
   },
   {
     "id": "content-review",
-    "title": "Revisar contenido en cualquier formato",
-    "explanation": "Comprobar información sensible en resúmenes, tablas y traducciones.",
+    "title": "Review content in any format",
+    "explanation": "Check for sensitive information in summaries, tables, and translations.",
     "layer": "output",
-    "limitation": "Puede producir errores; no reemplaza restringir el contexto antes del modelo."
+    "limitation": "Checks each answer on its own, so small pieces spread across several answers can slip through. It can also make mistakes, and it does not replace restricting context before the model.",
+    "controls": [
+      "output-review"
+    ]
   }
 ]
