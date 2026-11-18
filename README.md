@@ -279,3 +279,11 @@ Use everyday language and offer technical details on demand. Show code in small 
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). The project license remains to be selected by its maintainers.
 
+## License
+
+This project is licensed under the [MIT License](LICENSE-MIT).
+
+Copyright (c) 2026 Data Science Group at Paderborn University, Paderborn, Germany.
+
+Bundled fonts retain their own licenses; see the OFL license files in [apps/web/fonts/](apps/web/fonts/).
+
