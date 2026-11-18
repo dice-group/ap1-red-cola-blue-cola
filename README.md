@@ -3,29 +3,133 @@
 
 # RED COLA – BLUE COLA
 
-An educational demo of AI safety risks and mitigation strategies for industry stakeholders and non-specialist audiences.
-
-> Demonstrators that communicate AI Safety risks and mitigation strategies in a way that is accessible to industry stakeholders and non-specialist audiences.
+An interactive educational demo about how AI assistants can leak confidential information—and how safeguards can help prevent it. Play as RED COLA to investigate and defend, or as BLUE COLA to test the assistant's defenses.
 
 ## Project status
 
 The simulated MVP is runnable: both roles, all four scenarios, before/after comparison, and the three outcome indicators. Responses are scripted and always labeled "simulated". Retrieval permissions and disclosure detection run for real in the security layer. No real model is connected yet.
 
-## Quick start
+## Run the demo on your computer
 
-Requires Python 3.10 or newer. There are no dependencies to install.
+Coming here from the poster QR? Download the project on a **Windows, macOS, or Linux computer**, start it with Python, and play in your browser. Scanning the QR opens this repository; it does not start an online game.
+
+**Python 3.10+ · No additional Python packages · No AI model download · No API key**
+
+### 1. Check Python
+
+Open **PowerShell** on Windows or **Terminal** on macOS/Linux.
+
+**Windows:**
+
+```powershell
+py --version
+```
+
+**macOS / Linux:**
+
+```bash
+python3 --version
+```
+
+The version must be **3.10 or newer**. If Python is missing or older, install a supported version from [python.org](https://www.python.org/downloads/) or your Linux distribution's package manager, then close and reopen your terminal. On Windows, enable **Add Python to PATH** if the installer offers it.
+
+If Windows does not recognize `py`, try `python --version`. If that reports Python 3.10+, use `python` instead of `py` in the commands below.
+
+### 2. Download the project
+
+Choose **one** option.
+
+**Option A — Download ZIP (no Git needed)**
+
+1. Click **Code → Download ZIP** at the top of this repository, or [download the ZIP directly](https://github.com/dice-group/ap1-red-cola-blue-cola/archive/refs/heads/main.zip).
+2. Extract the ZIP completely. On Windows, use **Extract All**; do not run the demo from inside the ZIP.
+3. Open the extracted project folder. It is normally named `ap1-red-cola-blue-cola-main`.
+4. Open a terminal in that folder. On Windows, right-click inside the folder and choose **Open in Terminal**, if available. Alternatively, open PowerShell or Terminal, type `cd ` followed by the full folder path in quotes, and press Enter.
+
+For example, if you extracted it into Downloads:
+
+**Windows:**
+
+```powershell
+cd "$HOME\Downloads\ap1-red-cola-blue-cola-main"
+```
+
+**macOS / Linux:**
+
+```bash
+cd "$HOME/Downloads/ap1-red-cola-blue-cola-main"
+```
+
+Adjust the path if you extracted it elsewhere. You should be in the folder containing `README.md`, `apps`, `packages`, and `content`.
+
+**Option B — Clone with Git**
+
+If Git is installed:
+
+```bash
+git clone https://github.com/dice-group/ap1-red-cola-blue-cola.git
+cd ap1-red-cola-blue-cola
+```
+
+### 3. Start the demo
+
+Run the command from the project folder.
+
+**Windows:**
+
+```powershell
+py -m apps.api
+```
+
+**macOS / Linux:**
 
 ```bash
 python3 -m apps.api
 ```
 
-Open http://127.0.0.1:8000. Use `--port` to change the port.
+No `pip install`, virtual environment, Node.js, Docker, or Ollama setup is required.
 
-Run the tests:
+### 4. Open your browser
+
+Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** on the **same computer** where you started Python.
+
+Choose **RED COLA** to investigate and defend, or **BLUE COLA** to try the attack missions. You can start with either role.
+
+Keep the terminal open while playing. Press **Ctrl+C** in that terminal to stop the server. Start it again with the same command whenever you want to play.
+
+The game uses local files, including its fonts, and runs without an internet connection once Python and the project are downloaded. Responses are scripted: this demo illustrates security mechanisms rather than evaluating a live LLM.
+
+### Troubleshooting
+
+| Problem | What to do |
+| --- | --- |
+| `py`, `python`, or `python3` is not found | Install Python 3.10+, reopen the terminal, and check its version. On Windows, try `python` if `py` is unavailable. |
+| `No module named apps` | Move into the extracted or cloned project folder containing `apps`, `packages`, and `content`, then run the command again. |
+| Python errors immediately on startup | Check the version of the exact Python command you are using. The demo requires Python 3.10+. |
+| Port 8000 is already in use (`Address already in use` / `WinError 10048`) | Run `py -m apps.api --port 8001` on Windows or `python3 -m apps.api --port 8001` on macOS/Linux. Then open [http://127.0.0.1:8001](http://127.0.0.1:8001). |
+| The browser cannot connect | Keep the server terminal open, check it for errors, and use the address and port printed there. Open the browser on the same computer. |
+| Opening `index.html` does not work | Start the Python server and use its local address. The interface needs the API; double-clicking the HTML file is not enough. |
+| Progress disappears after reloading or restarting | Game progress is temporary. Start a new case or mission; this version does not save progress across reloads or server restarts. |
+
+If you are still stuck, [open an issue](https://github.com/dice-group/ap1-red-cola-blue-cola/issues) with your operating system, Python version, command used, and error message.
+
+## Developer checks
+
+The automated checks use Python's standard library.
+
+**Windows:**
+
+```powershell
+py -m unittest discover -s tests -t .
+```
+
+**macOS / Linux:**
 
 ```bash
 python3 -m unittest discover -s tests -t .
 ```
+
+These checks are optional for visitors. See [tests/README.md](tests/README.md) for the manual demo checklist.
 
 ## The scenario
 
@@ -174,3 +278,4 @@ All project documentation, educational content, and user-facing text should be w
 Use everyday language and offer technical details on demand. Show code in small modules and explain the purpose of each layer. Do not present any mitigation as infallible. Follow the project's convention: **RED COLA defends and BLUE COLA attacks**, even though the color names may evoke other conventions.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). The project license remains to be selected by its maintainers.
+
